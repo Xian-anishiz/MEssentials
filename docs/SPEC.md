@@ -25,11 +25,11 @@ MEssentials is one web app for the DME student services that today are spread ac
 | Service | Name in app | What students do |
 |---|---|---|
 | Honesty store | HonestME Store | Browse products, add to cart, check out |
-| Item borrowing | ME-kailangan | Browse items, borrow and return units with an ID scan |
+| Item borrowing | ME-kailangan | Browse items, borrow and return units in the authenticated session |
 | Review materials | MEg-aral | Search, preview, bookmark, and download reviewers |
 | Events | ME Days | Browse events, register or unregister |
 | Registration queue | Registration | Join the online queue, see position, get alerts |
-| Notifications and messages | Bell icon | Read alerts, message volunteers |
+| Notifications | Bell icon | Read alerts and service updates |
 
 ### 1.2 In scope
 
@@ -38,11 +38,11 @@ MEssentials is one web app for the DME student services that today are spread ac
 - Three student login methods: Google UP Mail (primary), registered RFID card tap, and username/email plus an optional local password. New accounts are created through verified Google UP Mail; students may then link an RFID card and set a local password.
 - Store, borrowing, reviewer, events, and registration queue features, each with student and manager functions.
 - In-app notifications (the notification tab) and web push notifications.
-- A student-to-volunteer message system.
+- **Draft scope note:** Direct messaging is excluded from this draft. The final product is intended to replace it with a ticketing system; ticketing details are not part of this draft.
 - File upload for reviewers and images.
 - Background jobs in a PostgreSQL `jobs` table, claimed by a separate worker with `FOR UPDATE SKIP LOCKED`.
 - Standard browser sessions on physical stations. Students sign in, complete the transaction, and log out or finish the session under the site’s human operating protocol; there is no kiosk mode, station account type, device lockout engine, or station-specific API token in v1.
-- USB HID keyboard-emulation RFID scanning for student login and student identification during borrowing/return. A student taps their UP ID; the reader types its configured card identifier into a focused field and sends Enter. Students link the card to their own account during registration or later in Profile. Dynamic QR generation and camera-based QR scanning are deferred; unit labels and stored `qr_code` strings remain catalog identifiers only.
+- USB HID keyboard-emulation RFID scanning for student login and account linking. A student taps their UP ID; the reader types its configured card identifier into a focused field and sends Enter. Students link the card to their own account during registration or later in Profile. Borrowing and returning use the already authenticated student session. Dynamic QR generation and camera-based QR scanning are deferred; unit labels and stored `qr_code` strings remain catalog identifiers only.
 - Scanned-PDF detection and manager-entered tags/summaries so image-only reviewers remain searchable without OCR.
 
 ### 1.3 Out of scope (this release)
@@ -62,6 +62,12 @@ MEssentials is one web app for the DME student services that today are spread ac
 - Reduce clicks. The navigation scenario analysis totals 19 clicks, 10 keystrokes, 21 navigation actions, and 2 data-entry actions across six core scenarios. Keep each core flow at or under its counted clicks.
 - Defect Removal Efficiency (DRE = E / (E + D)) is the quality metric. Track it per release.
 
+### 1.5 Web mockup v1.0 boundary
+
+The first frontend mockup is allowed to run without the production database. It must use the existing M3 UI rules and flows from `UI_DESIGN.md`, including the supplied registration-form fields, list-first volunteer management workspaces, screenshot-aligned Admin table layouts, a general queue view, the event form builder, and Account settings notification controls. Mockup-only Store products may be added and modified through versioned browser storage so the state survives reloads. This browser storage is not production persistence and must not replace the planned database.
+
+The mockup does not include ticketing, repeated RFID scans during borrowing or returning, camera QR scanning, dynamic QR generation, kiosk controls, or academic-year calculation.
+
 ---
 
 ## 2. Tech Stack
@@ -73,13 +79,14 @@ MEssentials is one web app for the DME student services that today are spread ac
 | Backend | SvelteKit full-stack | API routes in `src/routes/api/v1/**/+server.ts` |
 | Database | PostgreSQL on Supabase | Pooled connection strings only (section 3.2) |
 | Object storage | Cloudflare R2 (S3-compatible) | Reviewer files and images |
+| Web application hosting | Vercel | Confirmed for the SvelteKit web application |
 | Background jobs | PostgreSQL `jobs` table + custom worker | Separate Node process (section 8) |
 | Live updates | Client polling | Svelte timers, paused in hidden tabs (section 6.10) |
 | Notifications | In-app tab + Web Push (VAPID) | `web-push` library, service worker (section 8.5) |
 | Auth | Google OAuth + username/email and password | Cookie sessions |
 | Bot protection | Cloudflare Turnstile | Free tier. Sign-up and repeated login failures |
 | Validation | Zod | Shared between client and server |
-| ORM / query layer | Drizzle ORM with `postgres` driver | **[ASSUMPTION]** Any typed query layer works if it can disable prepared statements |
+| ORM / query layer | Drizzle ORM with `postgres` driver | Any typed query layer must disable prepared statements when used with the transaction pooler |
 | Password hashing | argon2id via `@node-rs/argon2` | Prebuilt binaries, no native build step |
 | PDF text extraction | `pdftotext` (poppler-utils) | Needs the binary on the worker host **[ASSUMPTION]** |
 | Language | TypeScript everywhere | |
@@ -106,7 +113,7 @@ src/
     components/          # Svelte UI (see UI_DESIGN.md)
     server/
       db/                # client, schema, migrations
-      models/            # store, borrowing, reviewers, events, registration, notifications, messages, users
+      models/            # store, borrowing, reviewers, events, registration, notifications, users
       auth/              # sessions, Google OAuth, optional password, throttle
       storage/           # R2 client, presign, verify
       jobs/              # enqueue(), claim(), worker loop, scheduler
@@ -190,16 +197,15 @@ WORKER_POLL_INTERVAL_MS=3000
 WORKER_CONCURRENCY=3
 WORKER_DB_POOL_MAX=5
 
-# Upload limits (bytes)
-MAX_UPLOAD_PDF_BYTES=52428800        # 50 MB
-MAX_UPLOAD_IMAGE_BYTES=52428800      # 50 MB [ASSUMPTION: same as PDF, from the "50MB PDF/Image" example]
+# Upload limits (bytes); keep the changeable definitions in PROJECT_DEFINITIONS.md
+MAX_UPLOAD_PDF_BYTES=52428800        # 50 MB current draft definition
+MAX_UPLOAD_IMAGE_BYTES=              # TBD; use PROJECT_DEFINITIONS.md
 
-# Business rules
-MAX_ACTIVE_LOANS=5                   # [ASSUMPTION] from the "3 of 5" stat card
-MAX_LOAN_DAYS=7                      # [ASSUMPTION]
-BORROW_REMINDER_LEAD_DAYS=2          # the "Due within x days" value
-REGISTRATION_ALERT_POSITION=1        # alert when a student is this many places from the front
-ACADEMIC_YEAR_START_MONTH=8          # [ASSUMPTION] used to compute year standing
+# Business rules; final values belong in PROJECT_DEFINITIONS.md
+MAX_ACTIVE_LOANS=                    # TBD
+MAX_LOAN_DAYS=                       # TBD
+BORROW_REMINDER_LEAD_DAYS=           # TBD
+REGISTRATION_ALERT_POSITION=         # TBD
 ```
 
 There is no `REDIS_URL` and there are no email variables in this revision.
@@ -242,7 +248,7 @@ Every account is created only after a successful Google OAuth sign-in with a Goo
 
 There is no unverified account state and no staff account-verification step. Once OAuth succeeds, the account has the same student permissions as every other student. Profile completion remains a separate requirement for workflows that need profile data.
 
-The physical UP ID scan remains a separate identity check for borrowing and returns. A Registration Manager may link an inspected physical card to the already authenticated account; this does not change account verification or general permissions.
+Students may link their own UP ID RFID card to their account while signed in, during the first registration form or later in Profile. The USB HID reader types the card identifier into the focused field and sends Enter. The backend links the card only to the currently authenticated student, rejects identifiers already linked to another active account, and stores only a protected identifier digest. RFID login is unavailable until this link succeeds. After linking, a tap can authenticate the student. Students can revoke a lost card and link a replacement after signing in through UP Mail. A Registration Manager may help with reader troubleshooting but cannot bypass the student's authentication or link a card to an account on the student's behalf.
 
 A local password is optional. A student may set one after signing in through UP Mail and then use either Google sign-in or the local password. If the student forgets the local password, they sign in through Google and set a new password while logged in. No recovery codes or staff-issued temporary passwords are used.
 
@@ -250,15 +256,14 @@ A local password is optional. A student may set one after signing in through UP 
 
 | Capability | Student | Volunteer (matching role) | Admin |
 |---|---|---|---|
-| Sign up, log in, edit own profile, notification settings, block senders | Yes | Yes | Yes |
+| Sign up, log in, edit own profile, and notification settings | Yes | Yes | Yes |
 | View, search, filter in all services | Yes | Yes | Yes |
 | Cart and check out | Yes | Yes | Yes |
-| Borrow and return (UP Mail account, with physical ID scan) | Yes | Yes | Yes |
+| Borrow and return (authenticated account; registered RFID may identify the student) | Yes | Yes | Yes |
 | Open, bookmark, download reviewers | Yes | Yes | Yes |
 | Register or unregister for events | Yes | Yes | Yes |
 | Join or leave registration queue | Yes | Yes | Yes |
-| Send message to volunteers | Yes | Yes | Yes |
-| Send message to a student (carbon copy to others) | No | Yes (any role) | Yes |
+| Direct messaging | Excluded from this draft | Excluded from this draft | Excluded from this draft |
 | Add or edit products, restock, view store metrics | No | `store_manager` | Yes |
 | Add or edit borrowables and units, view borrowing details | No | `kailangan_manager` | Yes |
 | Add or edit reviewers, toggle visibility | No | `megaral_manager` | Yes |
@@ -268,6 +273,17 @@ A local password is optional. A student may set one after signing in through UP 
 | Grant or remove volunteer roles, grant admin (not self) | No | No | Yes |
 
 Enforce permissions in the model or a shared `authorize()` helper, not only in the UI.
+
+### 4.4 Role-based navigation and dashboards
+
+The app has one shared student-service dashboard and role-specific management links:
+
+- **Students:** show the normal service navigation: Store, Events, Borrow, Reviewer, and Register. Students do not see management links.
+- **Volunteers:** retain the same five student-service destinations and gain management links only for the volunteer roles they hold. A manager link opens the relevant edit/manage area; it does not replace the normal service page. Examples: Store plus **Manage Store** (add products, edit item details, update stock); Borrow plus **Manage Borrowables** (edit catalog items and units); Reviewer plus **Manage Reviewers** (upload, edit metadata, and manage visibility); Events plus **Manage Events** (create and edit events and view registrants); Register plus **Manage Queue** (configure sessions, advisers, and queue operations). A volunteer with several roles sees each matching management link.
+- **Administrators:** do not use the normal student-service dashboard as their home or navigation. They use the Admin dashboard only, with **Usage Logs**, **Students**, **Volunteers**, and **Admins**. Admins retain system-level management permissions through the Admin area; do not show the normal Store, Events, Borrow, Reviewer, or Register destinations in the Admin navigation.
+
+The role-based navigation is a presentation rule, not an authorization boundary. Every management route and API must still check the user's role on the server.
+
 
 ---
 
@@ -317,7 +333,6 @@ CREATE TABLE users (
   degree_program text,
   is_active boolean NOT NULL DEFAULT true,
   is_enrolled boolean NOT NULL DEFAULT true,
-  entry_year smallint CHECK (entry_year BETWEEN 2000 AND 2100),  -- academic year the student entered; standing is derived
   avatar_key text,                               -- R2 key
   is_admin boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -410,14 +425,6 @@ CREATE TABLE push_subscriptions (                -- one row per browser or devic
 );
 CREATE INDEX ON push_subscriptions (user_id);
 
-CREATE TABLE blocked_profiles (
-  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  blocked_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (user_id, blocked_user_id),
-  CHECK (user_id <> blocked_user_id)
-);
-
 CREATE TABLE audit_logs (                        -- privilege changes and other sensitive actions
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id uuid REFERENCES users(id),
@@ -429,16 +436,9 @@ CREATE TABLE audit_logs (                        -- privilege changes and other 
 );
 ```
 
-**Profile complete** means `first_name`, `last_name`, `student_number`, and `entry_year` are set. Joining the registration queue and registering for events require a complete profile (matches the "Prompt student profile update" step).
+**Profile complete** means `first_name`, `last_name`, and `student_number` are set. Joining the registration queue and registering for events require a complete profile (matches the "Prompt student profile update" step).
 
-**Year standing** is derived, not stored:
-
-```
-ayStartYear = (currentMonth >= ACADEMIC_YEAR_START_MONTH) ? currentYear : currentYear - 1
-yearStanding = ayStartYear - entry_year + 1
-```
-
-Use it for display and for `participation_constraints`. Students who shifted programs or are irregular may not match their entry year. Managers can still register them by hand through a message to the event manager **[ASSUMPTION]**.
+Do not calculate year standing from an entry year. If a workflow needs current year standing, add a `current year standing` field to that workflow's form and validate it for that workflow. See `PROJECT_DEFINITIONS.md`.
 
 ### 5.3 HonestME Store
 
@@ -642,7 +642,7 @@ CREATE TABLE events (
   starts_at timestamptz NOT NULL,
   ends_at timestamptz,
   capacity integer CHECK (capacity IS NULL OR capacity > 0),   -- null = unlimited
-  participation_constraints jsonb NOT NULL DEFAULT '{}',        -- e.g. {"year_standings":[1,2]} (section 5.11)
+  participation_constraints jsonb NOT NULL DEFAULT '{}',        -- e.g. {"current_year_standing":[1,2]} when a form requires it (section 5.11)
   registration_opens_at timestamptz,
   registration_closes_at timestamptz,
   is_published boolean NOT NULL DEFAULT true,
@@ -729,7 +729,7 @@ Position of a waiting student = `1 + COUNT(waiting entries in the same session w
 
 Registration details shown to a student: queue number, adviser name, adviser desk, and session venue (`registration_sessions.location`).
 
-### 5.8 Notifications and messages
+### 5.8 Notifications
 
 ```sql
 CREATE TABLE notifications (
@@ -753,28 +753,9 @@ CREATE TABLE notification_recipients (
 CREATE INDEX ON notification_recipients (user_id, deleted_at, read_at);
 CREATE INDEX ON notification_recipients (notification_id) WHERE pushed_at IS NULL;
 
-CREATE TABLE messages (                          -- "tickets" in the class diagram
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  sender_id uuid NOT NULL REFERENCES users(id),
-  category text NOT NULL CHECK (category IN ('question','concern','feedback','reminder','reply','other')),
-  department service,                            -- which service it concerns
-  subject text NOT NULL,
-  content text NOT NULL,
-  parent_id uuid REFERENCES messages(id),        -- for replies
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE TABLE message_recipients (
-  message_id uuid NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  kind recipient_kind NOT NULL DEFAULT 'to',
-  read_at timestamptz,
-  deleted_at timestamptz,
-  PRIMARY KEY (message_id, user_id)
-);
-CREATE INDEX ON message_recipients (user_id, deleted_at);
 ```
 
-The `notifications` table has no email columns in this revision.
+The `notifications` table has no email columns in this revision. Direct messaging and ticketing are excluded from this draft. The final product is intended to replace direct messaging with a separately specified ticketing system.
 
 ### 5.9 Uploads
 
@@ -872,7 +853,7 @@ The schema is in 3NF, with BCNF for all key-based tables. These are deliberate e
 
 Rate limits **[ASSUMPTION]**:
 - **Local-password and RFID login failures** are stored in `auth_throttle` so they survive restarts and work across instances. Rule: 5 failures per account identifier/card digest or per IP within 15 minutes locks that key for 15 minutes. After 3 failures, require a Turnstile token for password login; RFID login remains rate-limited and returns a generic failure. Apply a separate modest limit to OAuth start/callback and account creation to reduce abuse; Google remains the primary identity provider.
-- **Other limits** (scan verify 10 per minute per session, search 60 per minute per session, everything else 300 per minute per session) use an in-memory limiter in each web instance for a single-instance deployment. With several instances, move them to Postgres or a shared limiter. Message sending is limited to 20 per hour per user **[ASSUMPTION]**.
+- **Other limits** (scan verify 10 per minute per session, search 60 per minute per session, everything else 300 per minute per session) use an in-memory limiter in each web instance for a single-instance deployment. With several instances, move them to Postgres or a shared limiter. Final rate values belong in `PROJECT_DEFINITIONS.md`.
 
 ### 6.1.1 Idempotency for state-changing requests
 
@@ -922,7 +903,7 @@ There is no password-only registration route, email-verification route, recovery
 - RFID login accepts the scanned identifier, computes its HMAC-SHA-256 digest with a server-side secret, finds the matching non-revoked card, and creates a normal student session. The login page must not reveal whether a card is registered.
 - A lost card is revoked from Profile after UP Mail sign-in. A replacement card is then scanned and linked. Revocation takes effect for the next login attempt.
 - **Security trade-off:** v1 accepts UID-only RFID login as a bearer credential: possession of a readable/copiable card identifier is treated as proof of identity. Do not claim cryptographic card authentication. Rate-limit failed scans, log successful and failed attempts without storing raw identifiers, and provide immediate card revocation. Sensitive actions still use their normal authorization and confirmation checks.
-- The same linked card can identify a student during borrowing/return, but login and transaction authorization remain separate checks.
+- Borrowing and return authorization use the already authenticated student session; no additional RFID scan is performed in those flows.
 
 **Optional local password**
 
@@ -938,13 +919,10 @@ There is no password-only registration route, email-verification route, recovery
 
 | Method | Path | Access | Description |
 |---|---|---|---|
-| GET | `/profile` | User | Own profile, including computed `yearStanding` and `profileComplete`. |
-| PATCH | `/profile` | User | Update username, first name, last name, student number, entry year. |
+| GET | `/profile` | User | Own profile and `profileComplete`. |
+| PATCH | `/profile` | User | Update username, first name, last name, and student number. |
 | GET | `/profile/notification-settings` | User | Per-service `inApp` and `push` flags. |
 | PUT | `/profile/notification-settings` | User | Set flags. `push` requires `inApp`. |
-| GET | `/profile/blocked` | User | Blocked senders. |
-| PUT | `/profile/blocked/:userId` | User | Block a sender. |
-| DELETE | `/profile/blocked/:userId` | User | Unblock. |
 
 Avatar upload uses the generic upload flow (section 7) with purpose `avatar`, then `PATCH /profile` with `{ avatarUploadId }`.
 
@@ -963,34 +941,9 @@ Avatar upload uses the generic upload flow (section 7) with purpose `avatar`, th
 
 Notifications are created by the system (restock, new reviewer, new event, event registration confirmation, due reminders, queue alerts). Managers trigger them through their own service routes. The notification tab is the source of truth. Push is a nudge on top (section 8.5).
 
-### 6.5 Messages
+### 6.5 Draft communications boundary
 
-| Method | Path | Access | Description |
-|---|---|---|---|
-| GET | `/messages` | User | Inbox and sent. Query: `box=inbox\|sent`. |
-| GET | `/messages/:id` | User | One message with its thread. |
-| POST | `/messages` | User | Send. See below. |
-| DELETE | `/messages/:id` | User | Soft delete for this user. |
-
-Send body:
-
-```json
-{
-  "category": "question",
-  "department": "store",
-  "subject": "Restock?",
-  "content": "...",
-  "targets": ["service_managers", "all_volunteers", "administrators"],
-  "toUserIds": [],
-  "ccUserIds": [],
-  "parentId": null
-}
-```
-
-- **Students** may use `targets` only. Targets resolve to user ids at send time (`service_managers` uses `department`).
-- **Volunteers and admins** may also use `toUserIds` (a student) with `ccUserIds` for other volunteers and admins.
-- Drop recipients who blocked the sender. Do not tell the sender who blocked them.
-- Rate limit message sending per user, to limit abuse **[ASSUMPTION]** (for example 20 per hour).
+Direct messaging is excluded from this draft, so there are no message endpoints or message rate limits here. The final product is intended to replace direct messaging with a ticketing system. Define and implement that system only during final-product planning, using `PROJECT_DEFINITIONS.md` as the place for its changeable definitions.
 
 ### 6.6 HonestME Store
 
@@ -1032,9 +985,8 @@ Notes:
 | GET | `/borrowables/categories` | User | Categories with counts. |
 | GET | `/borrowables/:id` | User | Item detail with units. |
 | GET | `/borrowing/me` | User | Summary: `{ onLoan, maxLoans, dueSoon, overdue, loans: [...] }`. |
-| POST | `/borrowing/scans/verify` | User | Body `{ code, purpose: "borrow"\|"return", unitId }`. Returns student profile and a `scanToken` valid 60 seconds. |
-| POST | `/borrowing/units/:unitId/borrow` | User | Body `{ dueAt, scanToken }`; requires `Idempotency-Key`. |
-| POST | `/borrowing/units/:unitId/return` | User | Body `{ scanToken }`; requires `Idempotency-Key`. |
+| POST | `/borrowing/units/:unitId/borrow` | User | Body `{ dueAt }`; uses the already authenticated student context and requires `Idempotency-Key`. |
+| POST | `/borrowing/units/:unitId/return` | User | Uses the already authenticated student context and requires `Idempotency-Key`. |
 | POST | `/borrowables` | `kailangan_manager` | Add borrowable. |
 | PATCH | `/borrowables/:id` | `kailangan_manager` | Edit. |
 | POST | `/borrowables/:id/units` | `kailangan_manager` | Add unit. |
@@ -1043,22 +995,17 @@ Notes:
 
 Flow (matches the BorrowBorrowable and ReturnBorrowable swimlanes):
 
-**Physical station protocol (v1):** the station is a normal browser session, not a managed kiosk. The student signs in with their own UP Mail account, completes checkout or the borrow/return confirmation, then logs out or completes the normal session flow. Staff manage physical device access and logout practice. The application does not issue station tokens, run device auto-lockouts, or isolate kiosk sessions. The USB HID scanner is used for the student ID code only; the item is selected by its human-readable unit label / stored unit identifier.
+**Physical station protocol (v1):** the station is a normal browser session, not a managed kiosk. The student signs in with their own account, completes checkout or the borrow/return confirmation, then logs out or completes the normal session flow. Staff manage physical device access and logout practice. The application does not issue station tokens, run device auto-lockouts, or isolate kiosk sessions. RFID is used for login or account linking only; the item is selected by its human-readable unit label / stored unit identifier.
 
 1. Student selects an item, sees its units, picks one, and clicks Borrow or Return.
 2. For borrow, the student picks a return date (must be after now and at most `MAX_LOAN_DAYS` days ahead **[ASSUMPTION]**).
-3. The station prompts for an ID scan. The scanner sends the card code to `/borrowing/scans/verify`.
-4. Server hashes the scanned RFID identifier and looks up the active row in `student_rfid_cards`.
-   - No match: `422 SCAN_INVALID`. The UI prompts for a rescan.
-   - For return, if the scanned student is not the borrower: `422 SCAN_WRONG_STUDENT`.
-   - Match: return the student profile and `scanToken` (signed, bound to unit, purpose, and borrower).
-5. Student confirms. The UI calls borrow or return with the token and an `Idempotency-Key`. The handler consumes the scan token in the same transaction as the loan/return write. A consumed, expired, wrong-purpose, wrong-unit, or wrong-borrower token is rejected. "Choose not to confirm" means rescan: start again at step 3.
+3. The authenticated student confirms the borrow or return action. The UI calls the relevant endpoint with an `Idempotency-Key`; no second RFID scan is shown or required.
 
-**Borrow/return replay protection.** Use operations `borrowing.borrow` and `borrowing.return` in the idempotency store. Save the final response in the same transaction as the loan state change. Keep the partial unique open-loan index as the final guard against two active loans for one unit.
+**Borrow/return replay protection.** Use operations `borrowing.borrow` and `borrowing.return` in the idempotency store. Save the final response in the same transaction as the loan state change. Keep the partial unique open-loan index as the final guard against two active loans for one unit. RFID identity is established before this flow through the authenticated session.
 
 **Borrow transaction:**
 
-1. Verify the token. Begin transaction.
+1. Verify the authenticated student and begin the transaction.
 2. `SELECT ... FROM borrowable_units WHERE id = $unit FOR UPDATE`. If status is not `available`: `409 UNIT_UNAVAILABLE`.
 3. Count the borrower's open loans. If it is at or above `MAX_ACTIVE_LOANS`: `409 LOAN_LIMIT`.
 4. Insert `borrow_records` (due_at from the request). Set unit status `borrowed`.
@@ -1066,7 +1013,7 @@ Flow (matches the BorrowBorrowable and ReturnBorrowable swimlanes):
 
 No job is enqueued. The hourly reminder sweep finds the loan when it enters the reminder window (section 8.3).
 
-**Return transaction:** verify token, lock the unit, set `returned_at = now()`, set unit status `available`, commit, return confirmation. Nothing to cancel, because the sweep only looks at open loans.
+**Return transaction:** verify the authenticated borrower, lock the unit, set `returned_at = now()`, set unit status `available`, commit, return confirmation. Nothing to cancel, because the sweep only looks at open loans.
 
 Derived loan states for the UI: **Overdue** (`due_at < now`), **Due in N days** (`due_at - now <= BORROW_REMINDER_LEAD_DAYS` shows the stat card; list badge shows exact days), otherwise on loan.
 
@@ -1117,7 +1064,7 @@ Create flow (matches AddReviewer swimlane): upload file (section 7), submit meta
 
 **Register transaction** (algorithm: Event Registration):
 
-1. Check the profile is complete and passes `participation_constraints` (using the derived year standing).
+1. Check the profile is complete and passes `participation_constraints`. If current year standing is required, validate the value submitted in the relevant form; do not derive it from an academic-year calculation.
 2. Validate answers against active prompts (all required prompts answered). Invalid: `400` with field errors and the UI prompts for re-entry.
 3. Begin transaction and reserve the `events.registration.create` idempotency key. `SELECT ... FROM events WHERE id = $id FOR UPDATE`.
 4. Check registration window: else `409 REGISTRATION_CLOSED`.
@@ -1177,19 +1124,14 @@ Manager routes (`registration_manager`):
 
 ### 6.11 Staff and Admin
 
-Staff account tools (`registration_manager` or Admin):
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/staff/accounts` | Search accounts by name, username, email, or student number. Query: `q`, page. |
-| GET | `/staff/accounts` | Admin/authorized staff | View student account and linked RFID-card status; no staff-side account verification or normal card-linking action. |
-
-Every call writes an `audit_logs` row. Staff cannot use these routes on their own account or on an admin account unless they are an admin **[ASSUMPTION]**.
-
 Admin routes:
 
 | Method | Path | Access | Description |
 |---|---|---|---|
+| GET | `/admin/usage-logs` | Admin | List usage logs with service type, date/time range, sorting, and pagination. |
+| GET | `/admin/students` | Admin | List student directory fields with college, program, active, enrolled, and student-number filters; supports sorting and pagination. |
+| GET | `/admin/volunteers` | Admin | List volunteer accounts with assigned roles and ordinary profile fields; supports role, college, program, and active filters plus sorting and pagination. |
+| GET | `/admin/admins` | Admin | List Admin ID, Nickname, and Is Active with active filter, sorting, and pagination. |
 | GET | `/admin/users` | Admin | Search a student profile. Query: `q`, page. |
 | GET | `/admin/users/:id` | Admin | Profile with roles and privileges. |
 | PUT | `/admin/users/:id/volunteer-roles` | Admin | Body `{ roles: [...], confirm: true }`. An empty array removes all volunteer privileges. |
@@ -1361,7 +1303,7 @@ For each returned row, create a notification for that borrower (service `kailang
 
 - Because the sweep runs hourly, a reminder arrives up to one hour late. That is fine for day-level deadlines.
 - Nothing needs cancelling on return, because the query only reads open loans. A lost or restarted worker misses nothing. The next sweep catches up.
-- The overdue reminder is sent once per loan **[ASSUMPTION]**. A volunteer can message the student for follow-ups.
+- The overdue reminder is sent once per loan; final reminder timing belongs in `PROJECT_DEFINITIONS.md`.
 - If a loan is created inside the lead window, the next sweep sends the due-soon reminder.
 - Join `borrowable_units` and `borrowables` to put the item name in the body.
 
@@ -1498,29 +1440,28 @@ Allowed state changes (reject all others with `409`):
 
 ## 10. Frontend Routing
 
-Page routes follow the rail order in the design: Store, Borrow, Reviewer, Events, Register, then Notifications and Profile at the bottom. See `UI_DESIGN.md` for layouts. Add a Google UP Mail sign-in screen, optional password setup/change screen, and push opt-in screens using the same M3 tokens.
+Student and Volunteer page routes follow the navigation order in the design: Store, Events, Borrow, Reviewer, Register, then Notifications and Profile as account utilities. Volunteers also see role-specific management routes. Admins use the separate Admin navigation. See `UI_DESIGN.md` for layouts. Add a Google UP Mail sign-in screen, optional password setup/change screen, and push opt-in screens using the same M3 tokens.
 
 | Route | Screen | API used |
 |---|---|---|
 | `/login` | Three methods: Continue with UP Mail (primary), tap registered RFID card, or username/email and password | `/auth/*` |
 | `/signup` | UP Mail OAuth account creation followed by student profile form and UP ID tap to link RFID card; card linking may be skipped and completed later | `/auth/google*`, `/auth/rfid/*`, `/profile*` |
 | `/store` | Product grid + filters + cart | `/store/*` |
+| `/events` | Registered and available events | `/events*` |
 | `/borrow` | Loan stats, on loan list, available list | `/borrowables`, `/borrowing/*` |
 | `/reviewer` | Reviewer list + filters | `/reviewers*`, `/courses` |
-| `/events` | Registered and available events | `/events*` |
 | `/register` | Queue position, next steps | `/registration/queue*` |
 | `/notifications` | Notification list, push opt-in banner | `/notifications*`, `/push/*` |
-| `/messages` | Inbox and compose | `/messages*` |
+| Ticketing | Excluded from this draft | Final-product scope only |
 | `/profile` | Profile, optional local password setup/change, linked RFID card status/link/revoke, notification settings, device alerts | `/profile*`, `/auth/*`, `/push/*` |
 | `/manage/store`, `/manage/borrow`, `/manage/reviewer`, `/manage/events`, `/manage/registration` | Manager tools (role-gated) | service manager routes |
-| `/staff/accounts` | Link physical ID cards for borrowing/return scanning | `/staff/*` |
 | `/admin/users` | Roles and privileges | `/admin/*` |
 | `/admin/usage-logs` | Usage logs with service and date filters | `/admin/usage-logs*` |
 | `/admin/students` | Student directory with college/program/status/number filters | `/admin/students*` |
-| `/admin/services` | Service catalog and in-use status | `/admin/services*` |
+| `/admin/volunteers` | Volunteer directory, role filters, and role management | `/admin/volunteers*` |
 | `/admin/admins` | Administrator directory and active status | `/admin/admins*` |
 
-Use `+layout.server.ts` to load the session and block pages by role. Account creation already proves UP Mail identity; profile completion checks remain specific to workflows that need profile data. Client navigation keeps the rail visible. The Admin area includes Usage Logs, Students, Services, and Admins directory pages; their fields and filters are defined in `UI_DESIGN.md` section 9.4.
+Use `+layout.server.ts` to load the session and block pages by role. Account creation already proves UP Mail identity; profile completion checks remain specific to workflows that need profile data. Client navigation keeps the rail visible. The Admin area is separate from the student-service dashboard and includes Usage Logs, Students, Volunteers, and Admins pages; their fields and filters are defined in `UI_DESIGN.md` section 9.4.
 
 ---
 
@@ -1542,7 +1483,7 @@ Use `+layout.server.ts` to load the session and block pages by role. Account cre
 - Turnstile after repeated local-password login failures. Durable lockouts in `auth_throttle`; apply rate limits to OAuth entry and callback endpoints.
 - Every account must have a Google-verified `@up.edu.ph` identity. Students can also log in with a linked RFID card or username/email and password. RFID UID-only login is a documented bearer-credential trade-off; support revocation, rate limits, audit events, and re-linking. Optional local passwords are set or changed only after Google sign-in or current-password verification.
 - Validate and escape all input. Parameterized queries only.
-- Row-level access in code: students read only their own notifications, messages, loans, and queue entry.
+- Row-level access in code: students read only their own notifications, loans, and queue entry.
 - Never expose other students' data in queue or registrant views to students.
 - Signed URLs only for files. No public bucket.
 - Push payloads carry no personal data.
@@ -1570,8 +1511,8 @@ V1 records each purchase with immutable `unit_price`, `unit_cost`, and `total` s
 
 ## 12. Testing and Quality
 
-- Unit tests (Vitest): models, validation, state transitions, year standing, position calculation.
-- Integration tests: API routes against a test Postgres. Cover each swimlane flow and its failure branches (invalid input, invalid scan, wrong student, full event, closed queue, out of stock).
+- Unit tests (Vitest): models, validation, state transitions, current-year-standing form validation where applicable, and position calculation.
+- Integration tests: API routes against a test Postgres. Cover each swimlane flow and its failure branches (invalid input, authentication failure, full event, closed queue, out of stock).
 - Auth tests: Google OAuth success and rejection for unverified email, wrong domain, invalid state/nonce, duplicate email with a different Google subject, optional password setup/change, current-password and fresh-OAuth step-up, login throttle and lockout, session revocation, and first-admin bootstrap.
 - Concurrency tests: repeated and simultaneous identical checkout requests with the same idempotency key create one purchase; same key with a different payload returns 409; two borrows of one unit create one open loan; scan token is consumed once; two registrations for the last event slot create one registration per student; two queue joins by the same student return the same ticket; queue alerts are not duplicated.
 - Job tests: two workers claiming at once (each job runs once), stuck-job recovery, retry with backoff, dead after max attempts, scheduler creates one job per time bucket with two workers, idempotent re-runs.
@@ -1602,38 +1543,59 @@ The plan includes a Migration phase (4 days). Import from the existing Google Sh
 The following operational details still need confirmation. Core identity and v1 scope decisions stated as confirmed below are not open choices.
 
 1. **Station operating protocol (confirmed scope).** Stations use the standard web app in a browser. A student signs in, completes the transaction, and logs out or finishes the session. Physical supervision and device security are handled by staff. There is no kiosk state engine, station account type, device auto-lockout, or station-specific API token in v1.
-2. **Scanner and item-code scope (confirmed scope).** Use USB HID keyboard-emulation RFID reader hardware for student identity and login. It types the card identifier into a focused field and sends Enter. The student links the card to their own account while signed in through UP Mail; the protected digest is stored in `student_rfid_cards`. The same card can identify the student for borrowing/return. Borrowable units keep a plaintext human-readable label and a `qr_code` text identifier in PostgreSQL. Dynamic QR image generation and camera scanning are deferred; no QR camera workflow is required for v1.
-3. **Image size limit.** The 50 MB PDF/Image example is applied to both PDFs and images. Image size may be reduced to 5 MB by changing `MAX_UPLOAD_IMAGE_BYTES`; this remains an operational choice.
+2. **Scanner and item-code scope (confirmed scope).** Use USB HID keyboard-emulation RFID reader hardware for student identity, login, and account linking. It types the card identifier into a focused field and sends Enter. The student links the card to their own account while signed in through UP Mail; the protected digest is stored in `student_rfid_cards`. Borrowing and returning use the already authenticated student session and do not repeat the RFID scan. Borrowable units keep a plaintext human-readable label and a `qr_code` text identifier in PostgreSQL. Dynamic QR image generation and camera scanning are deferred; no QR camera workflow is required for v1.
+3. **Changeable definitions.** Final image limits, loan rules, reminder timing, queue alert positions, rate limits, idempotency retention, and similar operational values belong in `PROJECT_DEFINITIONS.md` so they can be changed without rewriting the product specification.
 4. **Image storage.** You named R2 for reviewer files. This spec also stores product, event, borrowable, and avatar images in R2.
-5. **Hosting.** Web app and worker hosting is not chosen. The worker needs an always-on process (a small VM or container) and the `pdftotext` binary. Serverless-only hosting will not work for the worker. An alternative is Supabase `pg_cron` calling a protected endpoint every minute, but long PDF extraction could hit time limits.
+5. **Hosting.** Vercel is confirmed for the web application. The final worker deployment model is not chosen. The worker still needs an always-on process and the `pdftotext` binary; record the final worker choice in `PROJECT_DEFINITIONS.md`.
 6. **VAPID subject.** `VAPID_SUBJECT` needs a contact (`mailto:` or `https:`). Pick one the team controls.
 7. **Turnstile.** Needs a free Cloudflare account and a site key. If you prefer no third party, replace it with a rate limit only (weaker).
 8. **UP Mail identity rule (confirmed).** Google OAuth is required to create an account. Require `email_verified=true` and the exact `up.edu.ph` domain. Local password login is optional and can only be enabled after Google sign-in.
-9. **Physical ID-card linking.** A Registration Manager or Admin may inspect the physical UP ID and link its scanned code to the authenticated account. This is separate from account verification and only supports borrowing/returning.
-11. **Entry year.** Profiles store the year a student entered, and year standing is computed with August as the start of the academic year. Shifters and irregular students may not match.
+9. **Physical ID-card linking (confirmed).** The student links their own UP ID by tapping it while signed in through UP Mail, during registration or later in Profile. RFID login is unavailable until the card is linked. Registration staff may help with reader issues but cannot link a card on the student's behalf or bypass authentication.
+11. **Current year standing.** No academic-year calculation is used. If a workflow needs year standing, add a current year standing field to that workflow's form and validate the submitted value.
 12. **Cart.** Kept in the browser until checkout.
-13. **Loan rules.** `MAX_ACTIVE_LOANS = 5` comes from the "3 of 5" card. `MAX_LOAN_DAYS = 7` and the lead time of 2 days are guesses. The overdue reminder is sent once.
+13. **Loan rules.** Maximum active loans, loan duration, and reminder lead time are TBD and belong in `PROJECT_DEFINITIONS.md`. Do not treat the earlier card values as final.
 14. **Registration rules.** Students who left or were removed cannot rejoin the same session without a manager. One open session at a time. "You're next" alerts do not fire on join.
 15. **Queue updates.** Polling every 10 seconds with `ETag`, not live push. Pauses in hidden tabs.
 16. **Admin and staff changes** delete the target user's sessions.
-17. **Rate limiting.** Local-password login failures are stored in Postgres. OAuth entry/callback and other endpoint limits must also be applied. In-memory limits are acceptable only for a single web instance; use Postgres or a shared limiter for multiple instances.
+17. **Rate limiting.** Local-password login failures are stored in Postgres. OAuth entry/callback and other endpoint limits must also be applied. The final values belong in `PROJECT_DEFINITIONS.md`.
 18. **Wording fix.** The queue screen reads "Your are in line". Use "You are in line".
 19. **Scanned PDFs.** OCR is excluded. The extraction threshold and manager fallback are specified in sections 5.5, 6.8, and 8.3.
-20. **Design additions.** The expanded auth, verification, staff/admin, mobile, and iOS push onboarding screens are specified in `UI_DESIGN.md`.
+20. **Design additions.** The expanded auth, staff/admin, mobile, and iOS push onboarding screens are specified in `UI_DESIGN.md`. Earlier recovery-code and unverified-account screens are superseded.
 21. **Plan numbers.** The 114 FP estimate, 28-day Gantt chart, and effort breakdown remain historical. Re-estimate them before setting a delivery commitment.
 22. **Financial analytics.** V1 includes only baseline stock deduction, purchase snapshots, and instantaneous metrics. Historical charts, date-range reports, and exports are deferred.
 23. **Web push delivery.** Push is best effort and depends on browser permission and supported platform installation. In-app notifications remain the source of truth.
-24. **Mutation replay protection.** Sensitive state-changing endpoints require `Idempotency-Key`; responses and writes are committed in one transaction. Retain keys for at least 24 hours **[ASSUMPTION]**. UI loading/disabled states supplement, but do not replace, server and database controls.
-24. **Worker hosting.** A separate always-on Node worker is the preferred deployment. A protected scheduled endpoint is a fallback only if its execution limits can safely handle PDF extraction.
+24. **Mutation replay protection.** Sensitive state-changing endpoints require `Idempotency-Key`; responses and writes are committed in one transaction. Retention belongs in `PROJECT_DEFINITIONS.md`. UI loading/disabled states supplement, but do not replace, server and database controls.
+25. **Communications boundary.** Direct messaging is excluded from this draft. The final product is intended to replace it with a ticketing system; define that system separately during final-product planning.
 
 
-## 16. Admin dashboard data contract (Revision 5)
+## 16. Role-based dashboard and Admin data contract (Revision 6)
 
-The Admin dashboard includes four directory/report pages. These pages are separate from the service-manager tools and must be role-gated to Administrators.
+The application presents different navigation based on role:
 
-- **Usage Logs:** Filters: Service Type, Date Range Start, Date Range End. Table columns: Usage Log ID, Service ID, Service Type, Student Number, Admin ID, Date Time Start, Date Time End, Location. Date filters include time-zone-aware date/time values. Empty results show a clear empty state; pagination and sortable columns are required.
-- **Students:** Filters: College Programs, Colleges, Is Active, Is Enrolled, Min Student Number, Max Student Number. Table columns: Student Number, First Name, Middle Initial, Last Name, Email, Phone Number, College, Program. `Is Active` and `Is Enrolled` are separate states and must not be conflated. Student number range filters use the stored student-number format and must be validated before querying.
-- **Services:** Filters: Service Type and In Use. Table columns: Service ID, Service Name, Service Type, In Use. `In Use` means whether the service is currently enabled/available in MEssentials, not whether a student is using it at that moment.
-- **Admins:** Filter: Is Active. Table columns: Admin ID, Nickname, Is Active. Admin status and account active status must be shown distinctly if they can differ.
+- Students use the normal service dashboard: Store, Events, Borrow, Reviewer, and Register.
+- Volunteers keep all five student-facing service pages and see extra management links for each assigned role. The management workspace is separate from the public/student-facing service page.
+- Administrators use a separate Admin dashboard and do not see the normal service navigation. Its four pages are Usage Logs, Students, Volunteers, and Admins.
 
-All four pages use server-side filtering, sorting, and pagination. Apply the Material Design 3 visual rules in `UI_DESIGN.md`; the screenshots define the data fields and filter concepts, not a replacement visual system. Do not expose private student fields to non-admin users. Log admin changes to service availability and admin privileges.
+The Admin dashboard is not a general service catalog. Do not add a Services directory page. Service ID and Service Type remain fields in Usage Logs.
+
+### 16.1 Usage Logs
+
+Filters: Service Type, Date Range Start, Date Range End. Table columns, in order: Usage Log ID, Service ID, Service Type, Student Number, Admin ID, Date Time Start, Date Time End, Location. Date filters include time-zone-aware date/time values. Every column supports server-side ascending and descending sort. The UI shows up/down arrows beside the column label and marks the active sort field and direction. Pagination and an empty state are required.
+
+### 16.2 Students
+
+Filters: College, Degree Program, Is Active, Is Enrolled, Minimum Student Number, Maximum Student Number. Table columns: Student Number, First Name, Middle Initial, Last Name, Email, Phone Number, College, Program. `Is Active` and `Is Enrolled` are separate states. Student-number range filters must be validated against the stored student-number format. Every displayed column supports server-side sorting.
+
+Show ordinary directory data only. Do not return password hashes, Google subject IDs, session data, RFID identifier hashes, or other authentication/security fields.
+
+### 16.3 Volunteers
+
+Show each student who has one or more rows in `volunteer_roles`, once per student. Filters: Volunteer Role (multi-select), College, Degree Program, Is Active. Table columns: Student Number, First Name, Middle Initial, Last Name, Email, Volunteer Role(s), Is Active. Aggregate multiple roles into one display cell. Every displayed column supports server-side sorting. Do not return authentication/security fields.
+
+### 16.4 Admins
+
+Show users where `is_admin = true`. Filter: Is Active. Table columns: Admin ID, Nickname, Is Active. Admin ID is the stable user ID; Nickname uses the user's username/display alias. Every displayed column supports server-side sorting. Do not return authentication/security fields. Admin role changes require confirmation, are audit logged, and cannot remove the acting Admin's own Admin role.
+
+### 16.5 Shared query and presentation rules
+
+All four pages use server-side filtering, sorting, and pagination. Validate sort keys against an allowlist; never interpolate a client-provided column name into SQL. Use stable tie-break sorting by primary key. Restrict every page to Administrators. Log privilege changes and other sensitive Admin actions in `audit_logs`.

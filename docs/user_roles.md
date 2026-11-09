@@ -1,94 +1,192 @@
 # MEssentials: User Roles and Responsibilities
 
-**Document Version:** 1.0
-**Date:** 2026-11-08
+**Document Version:** 1.1
+**Date:** 2026-11-09
 
-This document outlines the operational responsibilities, capabilities, and system duties of the three primary actor groups in the MEssentials platform: Students, Volunteers (Service Managers), and Administrators.
+This document defines the duties, permissions, and dashboard access for Students, Volunteers, and Administrators.
 
 ---
 
-## 1. Student (Base Actor)
-Every account in the system is fundamentally a Student. Students are the primary participants who consume the department services.
+## 1. Student
 
-### System Capabilities
-* **Browsing & Discovery:** View products, borrowable items, reviewers, events, and their queue status.
-* **Transactions:** Borrow and return items (via RFID/ID scan), register for events, and join the registration queue, subject to each workflow's profile and permission checks.
-* **Communication:** Send messages/tickets (questions, concerns, feedback) to service managers.
-* **Account Management:** Update their profile (student number, entry year, name), toggle notification preferences, and manage web push subscriptions on their devices.
+Every account is a student account. A student may also hold one or more volunteer roles or Administrator status.
 
-### Responsibilities
-* **Account Security:** Safely store the 8 generated recovery codes upon sign-up, as there is no email-based password reset.
-* **Profile Accuracy:** Maintain an accurate profile (Name, Student Number, Entry Year) to ensure they meet participation constraints for events and registration.
-* **Physical Protocol Adherence:** Present a valid physical UP ID to Registration Managers for account verification or password recovery without codes.
+### Normal dashboard
+
+Students see these five service destinations:
+- **Store** — browse products and check out.
+- **Events** — browse events and register or unregister.
+- **Borrow** — browse borrowable items and manage loans.
+- **Reviewer** — search, preview, bookmark, and download reviewers.
+- **Register** — join or leave the registration queue.
+
+### Account and RFID responsibilities
+
+- Create the account through Google UP Mail with a verified `@up.edu.ph` address.
+- Keep profile details accurate, including name, student number, phone number, college, and degree program.
+- Optionally set a local password after signing in through UP Mail.
+- Link their own UP ID RFID card while signed in. They can do this on the initial registration form or later in Profile.
+- Tap the card while the **Tap your UP ID to link it** field is focused. The USB HID reader types the card identifier and sends Enter.
+- Use RFID login only after the backend confirms that the card has been linked to their account.
+- Revoke a lost card and link a replacement after signing in through UP Mail.
+- Sign in using any enabled method: Google UP Mail, a registered RFID card, or username/email plus local password.
+
+A card that has not been linked cannot log in. A card already linked to another active account cannot be linked again. The system stores a protected digest of the scanned identifier, not the raw value. RFID-only login is a deliberate convenience trade-off: a lost or copied card identifier may be used by another person. The system must support rate limits, audit logs, and card revocation.
 
 ---
 
 ## 2. Volunteer (Service Manager)
-Volunteers are students granted elevated privileges to manage specific modules of the MEssentials platform. A single volunteer can hold multiple managerial roles simultaneously. 
 
-**General Volunteer Responsibilities:** 
-* Respond to student tickets/messages concerning their designated department.
-* Send direct messages to individual students regarding follow-ups (e.g., overdue items).
+A Volunteer is a student with one or more service-manager roles. Volunteers keep the normal student dashboard and gain extra management links for their assigned roles. Management links open separate editing workspaces; they do not replace the student-facing service pages.
+
+### General responsibilities
+
+- Manage assigned service operations and keep service information accurate and current.
+- **Draft scope note:** Direct student-to-volunteer messaging is excluded from this draft. The final product is intended to replace it with a ticketing system, which is not specified or implemented here.
+- Use only the management tools granted by their volunteer roles.
+- Keep service information accurate and current.
 
 ### 2.1 HonestME Store Manager (`store_manager`)
-* **Inventory Management:** Add new products, edit product attributes (price, cost, image), and process manual stock replenishments.
-* **Reporting:** View per-product and overall store metrics (Total Sales, Total Profit, Quantity Bought).
-* **Communication:** Trigger mass notifications to all students when a popular item is restocked.
+
+**Normal page:** Store
+**Additional management link:** Manage Store
+
+- Add new products.
+- Edit existing product names, descriptions, prices, costs, images, and categories.
+- Update or replenish stock.
+- View current per-product and aggregate metrics: total sales, total profit, and quantity bought.
+- Send a restock notification when needed.
 
 ### 2.2 ME-kailangan Manager (`kailangan_manager`)
-* **Catalog Management:** Add and edit borrowable items and their specific inventory units.
-* **Legacy Imports:** Manually input and assign open loans imported from legacy Google Sheets to students once they create their accounts.
-* **Monitoring:** View borrowing details, track who holds which unit, and monitor expected return dates.
+
+**Normal page:** Borrow
+**Additional management link:** Manage Borrowables
+
+- Add and edit borrowable catalog items.
+- Add, edit, and manage individual inventory units.
+- Import open loans from legacy records when approved.
+- View borrowing details, who holds each unit, and due dates.
 
 ### 2.3 MEg-aral Manager (`megaral_manager`)
-* **Content Moderation:** Upload new PDF reviewers, assign metadata (tags, courses, authors), and toggle reviewer visibility (Hidden/Visible) after verifying the upload.
-* **Search Indexing Fallback:** Manually input supplementary tags and text summaries for scanned/image-based PDFs that fail automatic text extraction (`pdftotext`), ensuring they remain searchable.
-* **Troubleshooting:** Re-trigger background indexing jobs for reviewers if the initial processing fails.
+
+**Normal page:** Reviewer
+**Additional management link:** Manage Reviewers
+
+- Upload PDF reviewers.
+- Edit reviewer title and metadata.
+- Assign tags, course links, and authors.
+- Toggle reviewer visibility between Hidden and Visible.
+- Add tags and a manual summary/transcription for scanned PDFs when automatic text extraction finds no selectable text.
+- Retry indexing jobs after processing errors.
 
 ### 2.4 ME Days Manager (`medays_manager`)
-* **Event Coordination:** Create events, set registration time windows, define capacity limits, and configure participation constraints (e.g., restricting to specific year standings).
-* **Form Management:** Create and manage custom registration prompts (questions) required for event sign-ups.
-* **Attendee Management:** View the final list of registrants and their prompt answers.
+
+**Normal page:** Events
+**Additional management link:** Manage Events
+
+- Create and edit events.
+- Set registration windows and capacity limits.
+- Set participation constraints.
+- Create and manage event registration questions.
+- View registrants and their answers.
 
 ### 2.5 Registration Manager (`registration_manager`)
-* **Queue Operations:** Create registration sessions, open/close the queue, and set the physical location/venue.
-* **Adviser Routing:** Manage the list of available advisers, update their statuses, and advance the queue by calling the next waiting student to a specific adviser desk.
-* **Student RFID registration support:** Students link their own UP ID by tapping it during account/profile registration while signed in. The scanner types the card identifier into the focused field; the backend binds it to the signed-in student's account. Staff may help troubleshoot a reader or failed scan, but do not verify accounts or issue temporary passwords.
-* **Lost card support:** Direct the student to sign in with UP Mail, revoke the lost RFID card in Profile, and tap a replacement card to link it. If the student cannot access UP Mail, staff do not bypass account authentication.
+
+**Normal page:** Register
+**Additional management link:** Manage Queue
+
+- Create registration sessions.
+- Open or close the queue and set the venue.
+- Manage advisers and their availability.
+- Call the next waiting student to an adviser desk.
+- Help students troubleshoot RFID readers. Do not bypass the student's sign-in or link a card to the student's account on their behalf in the normal process.
+- Direct a student with a lost card to sign in through UP Mail, revoke the card in Profile, and link a replacement.
 
 ---
 
 ## 3. Administrator
-Administrators are the system overseers. They possess all the privileges of every Volunteer role, plus exclusive system-level capabilities.
 
-### System Capabilities
-* **Role Delegation:** Grant or revoke volunteer roles (`store_manager`, `kailangan_manager`, etc.) for any student account.
-* **Admin Delegation:** Grant Administrator privileges to other students (Administrators cannot revoke their own privileges).
-* **Full Access:** Can execute any management action across all five services in the event a specific volunteer is unavailable.
+Administrators have system-level permissions, including the powers of all service-manager roles. However, their navigation is a separate Admin dashboard. They do not use the normal Store, Events, Borrow, Reviewer, or Register dashboard as their Admin home.
 
-### Responsibilities
-* **Access Control:** Regularly review the list of active volunteers and administrators, ensuring privileges are revoked when a student graduates or leaves a committee.
-* **Audit Monitoring:** Review system audit logs (`audit_logs` table) to track sensitive actions like manual account verifications, privilege changes, and temporary password issuances.
-* **Initial Setup:** The first administrator is responsible for bootstrapping the system access hierarchy immediately after the initial deployment and database seeding script (`pnpm seed:admin`) is run.
+### Admin dashboard pages
 
-## 4. Student RFID card registration and login
+#### 3.1 Usage Logs
 
-1. A student first creates or accesses their MEssentials account through Google UP Mail using a verified `@up.edu.ph` identity.
-2. During the student registration/profile form, the student enters or confirms their name, student number, phone number, college, degree program, and UP Mail username.
-3. The student taps their UP ID on the RFID reader while the **Tap your UP ID to link it** field is focused.
-4. The USB HID reader types the card identifier and sends Enter. MEssentials submits the value to the backend and links it to the currently authenticated student account.
-5. The backend rejects a card identifier that is already linked to another active account. It stores a protected digest, not the raw card value.
-6. The student can skip RFID linking and complete it later in Profile. The student can also revoke a lost card and link a replacement after fresh authentication.
-7. Once linked, the student may log in by tapping the card. The three login methods are UP Mail (primary), RFID, and username/email plus password.
+Filter by:
+- Service Type
+- Date Range Start
+- Date Range End
 
-RFID login in v1 uses the scanned identifier alone. This is a deliberate convenience trade-off: a lost or copied card identifier may be used by another person. The system must support rate limits, audit logs, and card revocation. The card is also used to identify a student during borrowing/return, but a successful login does not by itself authorize a transaction.
+Review these columns:
+- Usage Log ID
+- Service ID
+- Service Type
+- Student Number
+- Admin ID
+- Date Time Start
+- Date Time End
+- Location
 
-## 5. Administrator dashboard responsibilities
+Every column can be sorted in ascending or descending order. The active sort direction is shown by an up/down arrow beside the column label.
 
-Administrators can access four dashboard pages:
-- **Usage Logs:** Review service use by service type and date range. Inspect usage log ID, service ID/type, student number, admin ID, start/end date and time, and location.
-- **Students:** Browse the student directory. Filter by college program, college, active status, enrolled status, and student-number range. Review student number, name, email, phone number, college, and program.
-- **Services:** Review service ID, name, type, and whether each service is in use. Filter by service type and in-use status.
-- **Admins:** Review admin ID, nickname, and active status. Filter by active status and manage privileges with confirmation.
+#### 3.2 Students
 
-All dashboard pages are Admin-only. Administrators must protect student contact and enrollment data and use the audit log for privilege and service-state changes.
+Filter by College, Degree Program, Is Active, Is Enrolled, and minimum/maximum Student Number.
+
+Review:
+- Student Number
+- First Name
+- Middle Initial
+- Last Name
+- Email
+- Phone Number
+- College
+- Program
+
+#### 3.3 Volunteers
+
+Filter by Volunteer Role, College, Degree Program, and Is Active.
+
+Review:
+- Student Number
+- First Name
+- Middle Initial
+- Last Name
+- Email
+- Volunteer Role(s)
+- Is Active
+
+A volunteer with more than one role appears once, with all roles listed in one field.
+
+#### 3.4 Admins
+
+Filter by Is Active.
+
+Review:
+- Admin ID
+- Nickname
+- Is Active
+
+### Administrator responsibilities
+
+- Grant or revoke volunteer roles.
+- Grant Administrator status to other students.
+- Review active volunteer and Admin accounts.
+- Review usage logs and audit logs.
+- Remove access when a volunteer or Admin leaves the committee or is no longer eligible.
+- Protect student contact and enrollment data.
+- Confirm role and active-state changes. An Admin cannot remove their own Admin role.
+
+Admin directory pages show ordinary operational information only. They must not display password hashes, Google subject IDs, session tokens, RFID identifier hashes, or other authentication/security data.
+
+---
+
+## 4. Navigation summary
+
+| Actor | Main navigation | Additional navigation |
+|---|---|---|
+| Student | Store, Events, Borrow, Reviewer, Register | None |
+| Volunteer | Store, Events, Borrow, Reviewer, Register | Management links for assigned roles |
+| Administrator | Usage Logs, Students, Volunteers, Admins | No normal student-service navigation |
+
+The role controls which links appear, but it does not replace server-side authorization. Every management route and API must check the user's role.

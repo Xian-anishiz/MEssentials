@@ -4,7 +4,7 @@
 **Date:** 2026-11-09  
 **Baseline documents:** `KLP.pdf` (19 pages) and `KLP-1.pdf` (49 pages)  
 **Updated technical documents:** `SPEC.md` and `UI_DESIGN.md` (revision 4)  
-**Guidance applied:** `messentials_scope_refinements.md` (version 1.0, 2026-11-08) and `messentials_user_roles_responsibilities.md` (version 1.0, 2026-11-08)
+**Guidance applied:** `scope_refinements.md` (version 1.0, 2026-11-08), `user_roles.md` (version 1.1, 2026-11-09), and `PROJECT_DEFINITIONS.md` (current draft definitions).
 
 ---
 
@@ -66,6 +66,8 @@ A fallback is not always safe as a direct production rollback. Database changes 
 - **Change:** The implementation stack is Svelte 5 + SvelteKit, Tailwind CSS, TypeScript, Supabase PostgreSQL, Cloudflare R2, Zod, Drizzle with the `postgres` driver, and `pnpm`. MVC remains the architecture. Runtime database access uses the Supabase transaction pooler with prepared statements disabled; migrations use the session pooler.
 - **Reason:** The Claude discussion selected SvelteKit and PostgreSQL and confirmed `pnpm`. The pooler rules avoid unsupported prepared statements and session-level features.
 - **Fallback:** To return to a generic stack, revert the stack table and repo layout in `SPEC.md` to the KLP-1 architecture description. To change the database provider, first write a new migration/connection plan and test transaction locks, generated columns, partial indexes, and GIN search. Do not switch providers by changing only an environment variable.
+
+- **Current hosting decision:** Vercel hosts the web application. The final deployment model for the separate worker remains undecided and must not be inferred from the Vercel decision.
 
 ### 3.2 Authentication, sign-up, verification, and recovery
 
@@ -140,6 +142,8 @@ A fallback is not always safe as a direct production rollback. Database changes 
 - **Change:** In-app notifications are the source of truth. Optional Web Push uses a VAPID key pair, a service worker, and one `push_subscriptions` row per browser/device. External email, SMS, Telegram, Discord, and other messaging fallbacks are out of scope. iOS users need an Add to Home Screen onboarding banner and steps.
 - **Reason:** The user raised cost concerns about email. Web Push has no per-message vendor charge, but browser permission and platform support are required. Keeping the in-app tab as the record avoids treating push delivery as guaranteed.
 - **Fallback:** If Web Push is unreliable or not wanted, turn off push preferences and keep in-app notifications. To restore email, select a provider and define sender identity, cost, bounce handling, verification, unsubscribe rules, and data retention before adding email columns or jobs.
+
+- **Draft communications boundary:** Direct messaging is excluded from the current draft. The final product is intended to replace it with a ticketing system; ticket fields, assignment, status, reply, notification, retention, and audit rules are intentionally deferred to final-product planning.
 
 ### 3.10 Background jobs and queue engine
 
@@ -275,9 +279,28 @@ To use the original baseline for planning, refer to those PDFs and their origina
 
 ## 7. Known open decisions (not silently guessed)
 
-The following remain operational choices or assumptions in `SPEC.md` section 14: hosting provider for the app and worker; the VAPID contact; final image upload cap; Turnstile account setup; allowed sign-up email domains; exact authority for account verification and temporary passwords; academic-year start month and handling of shifters/irregular students; maximum active loans, loan duration, reminder lead time; rejoin policy for students who leave a queue; message and API rate limits; and final worker deployment model.
+The following remain operational choices or assumptions in `SPEC.md` section 14 and are centralized in `PROJECT_DEFINITIONS.md`: the final image upload cap; VAPID contact; Turnstile account setup; maximum active loans; loan duration; reminder lead time; queue alert position; rejoin policy for students who leave a queue; rate limits; idempotency-key retention; and final worker deployment model. Vercel is confirmed for the web application, and `up.edu.ph` is the only allowed sign-up domain.
 
-The scope refinements themselves are treated as decisions, not open questions: no kiosk automation, no QR camera/generation in v1, no external message fallback, no advanced financial reports in v1, mobile behavior below 768px, and the scanned-PDF manual indexing fallback.
+The scope refinements themselves are treated as decisions, not open questions: no kiosk automation, no QR camera/generation in v1, no external message fallback, no direct messaging in the draft, no advanced financial reports in v1, mobile behavior below 768px, and the scanned-PDF manual indexing fallback. The final product ticketing replacement is recorded but not included in the draft.
+
+## 9. Current document updates
+
+- Vercel is the confirmed web application host; the worker deployment model remains TBD.
+- Sign-up is restricted to the exact `up.edu.ph` domain.
+- Academic-year calculation is removed. Forms may collect current year standing only when a workflow needs it.
+- Changeable values are centralized in `PROJECT_DEFINITIONS.md`.
+- Direct messaging is excluded from the draft. The final product is intended to use ticketing instead, but ticketing is not specified here.
+
+## 10. Web mockup v1.0 decisions
+
+- Missing mockup screens follow `UI_DESIGN.md` M3 standards and use simple, operational layouts when no reference design is supplied.
+- The registration form includes First Name, Middle Initial, Surname, Student Number, Phone Number, College, Degree Program, and UP Mail local part with the fixed `@up.edu.ph` suffix.
+- Volunteer management is list-first with filters, **Add entry**, and row-level **Edit/Modify** actions. The Admin dashboard follows the reference information architecture using M3 styling; reference images are not embedded in workflow files.
+- Event registration uses a Google Forms-like builder with unlimited question/statement and answer-field blocks. Student Name and Student Number are included in the blank template and prefilled for signed-in students.
+- Queueing uses a general visual treatment only for this mockup.
+- Borrow and return do not repeat RFID scanning; the authenticated student session supplies identity.
+- Notification settings are a separate Account settings section with a link to future iOS Web Push instructions. The instruction page may be omitted from mockup v1.0.
+- Store products can be added and modified without a database through versioned browser storage. This persistence is mockup-only.
 
 
 ## 8. Follow-up decisions applied after review
@@ -391,3 +414,44 @@ The pages require server-side filters, sorting, and pagination, plus M3 loading,
 - The scanner's identifier is suitable for use as a lookup secret only under the accepted UID-only risk. If the reader emits a public, cloneable UID, the documented risk remains.
 - The exact student number format and whether min/max comparisons are numeric or lexical must be confirmed before implementation.
 - Confirm the source of `Is Enrolled` and `Is Active` values and the service status rule for `In Use`.
+
+
+---
+
+# Revision 6 — Role-based dashboards and Admin directories
+
+**Date:** 2026-11-09
+
+## Decisions applied
+
+### 1. Student and Volunteer navigation
+- Students use the normal dashboard: Store, Events, Borrow, Reviewer, and Register.
+- Volunteers retain those five pages and gain separate management links for each assigned role.
+- Management pages edit service information without replacing the student-facing service pages.
+- Store managers can add products and edit existing product details and stock through Manage Store. The same separate-workspace rule applies to Borrowables, Reviewers, Events, and the Registration Queue.
+
+### 2. Separate Admin dashboard
+- Admins do not see the normal student-service navigation.
+- The Admin dashboard contains Usage Logs, Students, Volunteers, and Admins.
+- Removed the Services directory page from the Admin dashboard. Service ID and Service Type remain visible in Usage Logs.
+
+### 3. Admin directory data
+- Students: Student Number, First Name, Middle Initial, Last Name, Email, Phone Number, College, Program. Filters: College, Degree Program, Is Active, Is Enrolled, and minimum/maximum Student Number.
+- Volunteers: Student Number, First Name, Middle Initial, Last Name, Email, Volunteer Role(s), Is Active. Filters: Volunteer Role, College, Degree Program, Is Active.
+- Admins: Admin ID, Nickname, Is Active. Filter: Is Active.
+- Usage Logs: Usage Log ID, Service ID, Service Type, Student Number, Admin ID, Date Time Start, Date Time End, Location. Filters: Service Type and start/end date-time.
+- All listed columns support ascending/descending server-side sorting. The active sort direction is shown with up/down arrows beside the column name.
+
+### 4. Data exposure and M3 rules
+- Directory tables show ordinary operational data only. They do not expose password hashes, OAuth subject IDs, session data, RFID identifier hashes, or other authentication/security fields.
+- Admin pages use the existing Material Design 3 tokens and components. The supplied screenshots define information and fields, not a replacement visual style.
+- Server-side role checks remain required even when a link is hidden in the UI.
+
+## Files updated
+- `SPEC.md`
+- `UI_DESIGN.md`
+- `messentials_user_roles_responsibilities.md`
+
+## Notes
+- The Admin ID maps to the stable user ID. Nickname maps to the user's username/display alias in the current data model.
+- Sortable column names must be checked against a server-side allowlist; client-provided sort keys must never be inserted into SQL directly.

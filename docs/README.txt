@@ -1,41 +1,48 @@
-# MEssentials — Revision 5
+# MEssentials — Revision 6
 
-This package consolidates the revised project documents, scope references, and
-source materials.
+This archive contains the revised project specification, M3 UI design, role
+responsibilities, change log, scope references, original planning references,
+and supplied UI screenshots.
 
 ## Revised documents
-- SPEC.md — three login methods (UP Mail, RFID, username/email + password),
-  student RFID linking and revocation, and Admin dashboard data requirements.
-- UI_DESIGN.md — M3 sign-in/registration screens and M3 Admin dashboard layouts.
-- Changes.md — revision history and the Revision 5 decisions.
-- messentials_user_roles_responsibilities.md — student, volunteer, and Admin duties.
+- SPEC.md — system requirements, role-based navigation, authentication/RFID,
+  admin data contracts, and API routes.
+- UI_DESIGN.md — Material Design 3 layouts, student/volunteer navigation,
+  management workspaces, and the separate Admin dashboard.
+- Changes.md — revision history and decisions.
+- messentials_user_roles_responsibilities.md — student, volunteer, and Admin
+  capabilities and duties.
+- messentials_scope_refinements.md — confirmed scope constraints.
+- PROJECT_DEFINITIONS.md — changeable operational values and unresolved
+  definitions for easier future updates.
 
-## Scope reference
-- messentials_scope_refinements.md
+Current decisions include Vercel for web application hosting, `up.edu.ph` as
+the only allowed sign-up domain, and no academic-year calculation. A workflow
+that needs year standing adds a current year standing field to its form.
 
-## Original project references
-- KLP.pdf
-- KLP-1.pdf
-- UI_DESIGN.md for Material Design 3 - Claude.pdf
+Direct messaging is excluded from the current draft. The final product is
+intended to replace it with a ticketing system, but ticketing is not specified
+or implemented in these draft documents.
 
-## Supplied design screenshots
-- Student registration/RFID linking
-- Admin Usage Logs
-- Admin Students
-- Admin Services
-- Admin Admins
+## Navigation in Revision 6
+- Students: Store, Events, Borrow, Reviewer, Register.
+- Volunteers: the same five service pages plus management links for assigned
+  roles. Management pages are separate from student-facing service pages.
+- Administrators: Usage Logs, Students, Volunteers, Admins. Admins do not see
+  the normal student-service navigation. There is no Services directory page.
 
-## RFID behavior in this revision
-UP Mail is the primary account creation and sign-in method. After signing in,
-students can link their UP ID by tapping it on the USB HID RFID reader while the
-registration/profile field is focused. The reader types the identifier and sends
-Enter. A linked card can later be used for RFID-only login. Username/email plus
-local password is the third login method. RFID UID-only login is a deliberate
-bearer-credential trade-off; the specification includes rate limiting, protected
-identifier storage, audit logging, and card revocation.
+## Admin tables
+Usage Logs includes Usage Log ID, Service ID, Service Type, Student Number,
+Admin ID, Date Time Start, Date Time End, and Location. Students, Volunteers,
+and Admins show ordinary operational data only, not authentication or security
+fields. All displayed columns support ascending/descending sorting, shown by
+up/down arrows beside the column labels.
 
-The admin screenshots define the fields and filters to include. All admin pages
-must still follow Material Design 3 rather than copying the screenshots' styling.
+## Reference materials
+- Original KLP.pdf and revised KLP-1.pdf
+- Material Design 3 reference PDF
+- Supplied student registration and Admin dashboard screenshots, including
+  the sortable column header example
 
-This archive contains project documentation and references. It does not contain
-an implemented application or applied database migration.
+This archive contains documentation and reference materials. It does not
+contain an implemented application or applied database migrations.

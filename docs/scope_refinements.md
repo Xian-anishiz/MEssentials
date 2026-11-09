@@ -6,7 +6,9 @@
 
 **Status:** Active Guidance
 
-This document formalizes project scope adjustments, technical deferrals, and expanded operational workflows for the MEssentials platform without altering the baseline `SPEC.md` and `UI_DESIGN.md` documents.
+This document formalizes project scope adjustments, technical deferrals, and expanded operational workflows for the MEssentials platform without altering the archived baseline documents. Current draft decisions are aligned with `SPEC.md`, `UI_DESIGN.md`, and `Changes.md`.
+
+Changeable operational values belong in `PROJECT_DEFINITIONS.md` rather than being duplicated here.
 
 ## 1. Kiosk & Station Operations (Simplified Physical Model)
 
@@ -48,8 +50,7 @@ The development team has full authority to design and implement missing screens,
 
 | Screen / Flow | Required M3 Tokens & Components | Layout Requirements | 
 | ----- | ----- | ----- | 
-| **Auth & Sign-Up** | `surface`, `primary` buttons, M3 text fields, Turnstile container | Centered card layout on `background` (`#FEF7FF`), clean step for displaying the 8 one-time 16-character recovery codes. | 
-| **Account Verification** | `primary-container` banner, `surface-variant` card | Prominent notification banner for unverified accounts with staff ID verification guidance. | 
+| **Account Setup** | `surface`, `primary` buttons, M3 text fields, Turnstile container | Google-verified `@up.edu.ph` account creation with optional local password setup. Recovery codes, unverified accounts, and staff account verification are not part of the current draft. |
 | **Staff & Admin Dashboards** | `surface` tables, M3 chips, toggle switches, `error` badges | Manager/Admin tables (`/staff/accounts`, `/admin/users`) matching padding and typography from `UI_DESIGN.md`. | 
 | **Mobile Responsiveness** | Bottom Navigation Bar (M3 standard), collapsible filter drawer | On viewports `< 768px`, transform the 80px left Navigation Rail into a bottom navigation bar and collapse the 360px right Filter Panel into an overlay modal drawer. | 
 
@@ -75,7 +76,7 @@ The development team has full authority to design and implement missing screens,
 
 ### 5.1 Fallback Channels Out of Scope
 
-External messaging fallbacks (SMS gateways, third-party email services, Telegram/Discord bots) are explicitly **out of scope**. System communications rely entirely on:
+External messaging fallbacks (SMS gateways, third-party email services, Telegram/Discord bots) are explicitly **out of scope**. Direct student-to-volunteer messaging is also excluded from this draft. The final product is intended to replace direct messaging with a ticketing system, which must be specified separately during final-product planning. Draft system communications rely entirely on:
 
 1. In-App Notification Tab (`/notifications` - primary source of truth).
 
@@ -171,6 +172,14 @@ The following additions and scope adjustments are documented as formal points of
 
 * Addition of Cloudflare Turnstile bot protection and Argon2id secure password hashing.
 
-* Addition of non-email account recovery mechanisms (16-character pre-generated recovery codes).
+* Addition of optional local-password support after Google UP Mail sign-in; recovery codes and staff-issued temporary passwords are not part of the current draft.
 
 * Deferral of dynamic QR code generation, camera scanning engines, and advanced financial analytics to post-v1 phases.
+
+## 8. Current platform decisions
+
+* The web application will be hosted on Vercel.
+* The final deployment model for the separate worker is not yet selected.
+* Account creation is restricted to Google-verified `@up.edu.ph` identities.
+* No academic-year calculation is used. Workflows that need year standing should add a current year standing field to their forms.
+* Final image limits, loan duration, active-loan limits, reminder timing, rate limits, and similar values are maintained in `PROJECT_DEFINITIONS.md`.

@@ -1,40 +1,25 @@
 # Messentials UI Design Guide
 
-This file guides AI models that build the Messentials website UI (`www.messentials.com`). Follow it closely. When a detail is missing, use the Material Design 3 (M3) default.
+This file guides AI models that build the Messentials website UI (`www.messentials.com`). Follow it closely. When a detail is missing, use the Material Design 3 (M3) default. Changeable operational values belong in `PROJECT_DEFINITIONS.md`.
 
 **Stack assumptions:** Svelte 5 with SvelteKit, Tailwind CSS, Material Symbols (outlined) icons, and Roboto font. Use SvelteKit routes and server load/actions; do not introduce a second frontend framework.
+
+**Communication scope:** Direct student-to-volunteer messaging and ticketing are excluded from this draft UI. The final product is intended to replace messaging with a ticketing system, which must be designed separately during final-product planning.
 
 ---
 
 ## 1. Source Material
 
-### 1.1 Screen images
-
-Save the design screenshots in `docs/ui/` with these names. Reference them when you build each screen.
-
-| Screen | Route | Image path | Active nav item |
-|---|---|---|---|
-| Store | `/store` | `docs/ui/01-store.png` | Store |
-| Events | `/events` | `docs/ui/02-events.png` | Events |
-| Register (queue) | `/register` | `docs/ui/03-register-queue.png` | Register |
-| Borrow | `/borrow` | `docs/ui/04-borrow.png` | Borrow |
-| Reviewer | `/reviewer` | `docs/ui/05-reviewer.png` | Reviewer |
-| Notifications | `/notifications` | `docs/ui/06-notifications.png` | Bell icon |
-
-Embed them in docs or PRs like this: `![Store](docs/ui/01-store.png)`
-
-### 1.2 Figma links
-
 No Figma links exist yet. Replace each `TODO` with the real frame URL.
 
 | Screen | Figma frame |
 |---|---|
-| Store | `TODO: https://www.figma.com/design/<file-id>?node-id=<id>` |
-| Events | `TODO` |
-| Register (queue) | `TODO` |
-| Borrow | `TODO` |
-| Reviewer | `TODO` |
-| Notifications | `TODO` |
+| Store | `https://www.figma.com/design/kSYp0awil7Uk7ZU9qrQz08/Untitled?node-id=16-17536&t=aoSh4wjp2gNFUTzL-1` |
+| Events | `https://www.figma.com/design/kSYp0awil7Uk7ZU9qrQz08/Untitled?node-id=19-24253&t=aoSh4wjp2gNFUTzL-1` |
+| Register (queue) | `https://www.figma.com/design/kSYp0awil7Uk7ZU9qrQz08/Untitled?node-id=19-24510&t=aoSh4wjp2gNFUTzL-1` |
+| Borrow | `https://www.figma.com/design/kSYp0awil7Uk7ZU9qrQz08/Untitled?node-id=19-23998&t=aoSh4wjp2gNFUTzL-1` |
+| Reviewer | `https://www.figma.com/design/kSYp0awil7Uk7ZU9qrQz08/Untitled?node-id=19-23557&t=aoSh4wjp2gNFUTzL-1` |
+| Notifications | `https://www.figma.com/design/kSYp0awil7Uk7ZU9qrQz08/Untitled?node-id=20-25827&t=aoSh4wjp2gNFUTzL-1` |
 
 Do not invent Figma URLs. If a link is `TODO`, build from the images and this file.
 
@@ -217,9 +202,11 @@ The browser chrome in the screenshots (address bar, tabs) is a mock frame. Do no
 
 M3 Navigation Rail, 80px wide, pinned left.
 
-**Structure**
-- Top group (vertically centered in the rail): five destinations in this order: **Store**, **Borrow**, **Reviewer**, **Events**, **Register**.
-- Bottom group: **Notifications** bell icon, then **Profile** avatar button (circle, `bg-primary-container`, person icon in `primary`).
+**Structure and role variants**
+- Student top group (vertically centered in the rail): five destinations in this order: **Store**, **Events**, **Borrow**, **Reviewer**, **Register**.
+- Volunteer top group: the same five student destinations, followed by a divider and a **Manage** group. Show only management links for assigned roles: **Manage Store**, **Manage Borrowables**, **Manage Reviewers**, **Manage Events**, and/or **Manage Queue**.
+- Admin top group: a separate Admin navigation with **Usage Logs**, **Students**, **Volunteers**, and **Admins** only. Do not show Store, Events, Borrow, Reviewer, or Register in the Admin navigation.
+- Bottom group: **Notifications** bell icon, then **Profile** avatar button (circle, `bg-primary-container`, person icon in `primary`). These account utilities may remain available to all roles.
 
 **Destinations**
 
@@ -230,6 +217,23 @@ M3 Navigation Rail, 80px wide, pinned left.
 | Reviewer | `book` (bookmark book) | `/reviewer` |
 | Events | `calendar_today` | `/events` |
 | Register | `badge` (ID card) | `/register` |
+
+Volunteer management destinations use a separate Manage group:
+| Manage label | Route | Required role |
+|---|---|---|
+| Manage Store | `/manage/store` | `store_manager` |
+| Manage Borrowables | `/manage/borrow` | `kailangan_manager` |
+| Manage Reviewers | `/manage/reviewer` | `megaral_manager` |
+| Manage Events | `/manage/events` | `medays_manager` |
+| Manage Queue | `/manage/registration` | `registration_manager` |
+
+Admin navigation routes:
+| Label | Route |
+|---|---|
+| Usage Logs | `/admin/usage-logs` |
+| Students | `/admin/students` |
+| Volunteers | `/admin/volunteers` |
+| Admins | `/admin/admins` |
 
 **Item markup**
 
@@ -463,36 +467,124 @@ Routes: `/login`, `/signup`, and `/profile/security`. Use a centered `surface` c
 - If the student forgets the local password, direct them to sign in with UP Mail and set a new password. There is no recovery-code screen.
 - For RFID login, the scan field accepts the reader's typed identifier and Enter. Show a clear prompt to tap the card, a loading state, and a generic failure message that does not reveal whether the card is registered.
 
-### 9.2 UP Mail identity and physical ID linking
+### 9.2 UP Mail identity and RFID card linking
 
-All accounts start with a Google-verified `@up.edu.ph` identity. There is no unverified account banner or staff account-verification action.
+All accounts start with a Google-verified `@up.edu.ph` identity. Sign-up is restricted to the exact `up.edu.ph` domain. There is no unverified account banner or staff account-verification action.
 
-The staff account screen may show identity fields and an ID-card-code input. A Registration Manager confirms that they inspected the physical UP ID before linking the scanned code. The code supports borrow/return identity checks only; it does not grant or change account permissions. The ID/barcode scanner types into the focused field as a keyboard; no camera UI is needed.
+RFID links require the use of an RFID reader. The student volunteers/admin links the RFID card for student users. On the first registration form, show **Tap your UP ID to link it** as an optional field. The same control is available later in Profile. Keep the field focused while waiting for the USB HID reader; it types the card identifier and sends Enter. Show a masked card hint and a clear linked/not-linked state. Do not expose the raw card identifier after submission.
 
-### 9.3 Staff account tools
+The backend binds the scanned identifier to the authenticated student's account. Reject an identifier already linked to another active account. RFID login must fail for cards that have not been linked. A student can revoke a lost card and link a replacement after fresh UP Mail sign-in. Registration Managers may help with reader troubleshooting but must not bypass sign-in or register cards on behalf of students in the normal flow.
 
-Route: `/staff/accounts`. Use a `surface` table with search, status filters, M3 chips, pagination, and row actions. Include account name, username/email, student number, and linked RFID-card status. Staff may view whether a card is linked but do not register a student's card on the student's behalf in the normal flow. Do not include account verification or temporary-password actions.
+### 9.3 Student and volunteer navigation
 
-### 9.4 Admin user and role tools
+The role changes the navigation, not the underlying student-service experience:
 
-Route: `/admin/users`. Use a `surface` table with search, role chips, and actions to grant/revoke volunteer roles or administrator status. Use M3 switches or explicit role selectors; never make a role change from a hover or one-click row selection. Show a confirmation dialog with the target and exact roles. Admins cannot remove their own administrator privilege. Record changes in the audit log.
+- **Student navigation:** Store, Events, Borrow, Reviewer, Register. These are the normal dashboard destinations.
+- **Volunteer navigation:** show all five normal destinations plus management links for the volunteer's assigned roles. Keep the management links visually grouped under a **Manage** label or section. Examples: **Manage Store**, **Manage Borrowables**, **Manage Reviewers**, **Manage Events**, and **Manage Queue**. Only show links for roles the volunteer holds.
+- **Admin navigation:** do not show the normal student-service destinations. Admins use the separate Admin dashboard described below.
 
-### 9.4.1 Admin dashboard: directory and usage pages
+A volunteer manager page is a distinct workspace for editing information. It must not replace or remove the public/student-facing service page. For example, a Store Manager can open **Store** to see the student store and **Manage Store** to add a product, edit an existing product, change its price/image/details, or update stock.
 
-The supplied admin screenshots define the information architecture and field set. Rebuild these pages with the existing M3 design system; do not copy their plain browser-default look or treat the screenshots as a new color/type standard. Use the same M3 surface colors, typography, outlined fields, table headers, focus rings, selected navigation state, spacing, responsive breakpoints, and accessible contrast.
+### 9.4 Admin dashboard
 
-The Admin navigation has four destinations:
-- **Usage Logs** — filters for Service Type, Date Range Start, and Date Range End. Table columns: Usage Log ID, Service ID, Service Type, Student Number, Admin ID, Date Time Start, Date Time End, Location. Use sortable headers, date/time pickers, pagination, and an empty state.
-- **Students** — filters for College Programs, Colleges, Is Active, Is Enrolled, Min Student Number, and Max Student Number. Table columns: Student Number, First Name, Middle Initial, Last Name, Email, Phone Number, College, Program. Use searchable M3 dropdowns for long college/program lists. Keep active and enrolled as distinct filters.
-- **Services** — filters for Service Type and In Use. Table columns: Service ID, Service Name, Service Type, In Use. Show the enabled/in-use state with an M3 status chip or switch in the detail/edit view; require confirmation for disabling a service that has active work.
-- **Admins** — filter for Is Active. Table columns: Admin ID, Nickname, Is Active. Role and active-state changes use explicit controls and a confirmation dialog. Do not let an Admin revoke their own Admin role.
+Admins have a separate dashboard and do not see the normal Store, Events, Borrow, Reviewer, or Register navigation. The Admin navigation has four destinations only: **Usage Logs**, **Students**, **Volunteers**, and **Admins**. Do not include a separate Services directory page in this dashboard. The Service ID and Service Type fields remain part of Usage Logs.
 
-For all pages:
+The supplied screenshots define the admin information architecture and fields. Rebuild these pages with the existing M3 design system; do not copy their plain browser-default look or treat the screenshots as a new color/type standard. Use M3 surface colors, typography, outlined fields, table headers, focus rings, selected navigation state, spacing, responsive breakpoints, and accessible contrast.
+
+Admins can manage student and volunteer roles directly inside this dashboard. From the Students and Volunteers pages, an Admin can promote a student to volunteer, assign or remove one or more volunteer roles, and return a volunteer to an ordinary student by removing all volunteer roles. These actions must not require a separate back-office tool or database operation; use explicit controls, confirmation dialogs, and the same role-management permission checks for every change.
+
+#### 9.4.1 Usage Logs
+
+Filters:
+- Service Type
+- Date Range Start (date and time)
+- Date Range End (date and time)
+
+Table columns, in this order:
+1. Usage Log ID
+2. Service ID
+3. Service Type
+4. Student Number
+5. Admin ID
+6. Date Time Start
+7. Date Time End
+8. Location
+
+Every column header must support sorting with an up/down arrow beside the column name. The arrow indicates the active sort direction: ascending or descending. Clicking the header toggles the direction; a clear active-sort state must be visible. Use server-side sorting, date/time-aware filters, pagination, result counts, and a clear empty state. The Service ID column header may wrap to two lines on narrow table widths, as shown in the supplied reference; keep the sort control aligned with the label.
+
+#### 9.4.2 Students
+
+Show ordinary student directory information only. Do not expose password, OAuth subject, session, RFID identifier/hash, recovery, or other authentication/security fields.
+
+Filters should come from student data:
+- College
+- Degree Program
+- Is Active
+- Is Enrolled
+- Minimum Student Number
+- Maximum Student Number
+
+Table columns:
+1. Student Number
+2. First Name
+3. Middle Initial
+4. Last Name
+5. Email
+6. Phone Number
+7. College
+8. Program
+
+Allow sorting by every displayed column with the same up/down header control. Use searchable M3 dropdowns for long College and Degree Program lists. Keep Is Active and Is Enrolled as separate filters.
+
+Provide an explicit **Manage volunteer roles** action for each student. An Admin can use it to promote the student to volunteer and assign one or more volunteer roles without leaving the Admin dashboard. Role changes require confirmation and must surface success or error feedback.
+
+#### 9.4.3 Volunteers
+
+Show students who have at least one volunteer role. Do not expose authentication or security fields.
+
+Filters should come from the user and `volunteer_roles` data:
+- Volunteer Role (multi-select; Store, Borrowables, Reviewer, Events, Registration Queue)
+- College
+- Degree Program
+- Is Active
+
+Table columns:
+1. Student Number
+2. First Name
+3. Middle Initial
+4. Last Name
+5. Email
+6. Volunteer Role(s)
+7. Is Active
+
+A volunteer with multiple roles appears once, with all assigned roles shown in the same cell. Allow sorting by every displayed column. Role and active-state changes remain explicit actions with a confirmation dialog; this directory is not a shortcut around the role-management permission checks.
+
+Provide an explicit **Manage volunteer roles** action for each volunteer. An Admin can assign or remove individual volunteer roles, or remove all volunteer roles to return the account to an ordinary student. Keep the volunteer in this directory while at least one volunteer role remains; after all roles are removed, the account should no longer appear in the Volunteers directory. Role changes require confirmation and must surface success or error feedback.
+
+#### 9.4.4 Admins
+
+Show a compact list of administrator accounts. Do not expose authentication or security fields.
+
+Filters:
+- Is Active
+
+Table columns:
+1. Admin ID
+2. Nickname
+3. Is Active
+
+Allow sorting by each displayed column. Admin ID is the stable administrator identifier; Nickname is the display name used in the admin area. Admin role and active-state changes use explicit controls and a confirmation dialog. Do not let an Admin revoke their own Admin role.
+
+#### 9.4.5 Shared table behavior and M3 presentation
+
+For all four pages:
 - Place the page title first, then a compact filter row or responsive filter grid, then the data table.
-- Use server-side sorting, filtering, and pagination. Keep filter labels visible when fields have values; support clear-all.
+- Put a sort icon/control (up/down arrows) beside each sortable column label. Use M3 icon-button sizing, accessible labels such as **Sort by Student Number ascending**, and `aria-sort` on the active header. Do not rely on arrow direction alone to convey state.
+- Use server-side sorting, filtering, and pagination. Keep filter labels visible when fields have values; support Clear all.
+- Show only ordinary operational/directory data. Never include password hashes, Google subject IDs, session tokens, RFID identifier hashes, or other security credentials in directory tables.
 - On narrow screens, move filters into an M3 modal drawer and present table rows as stacked summary cards or allow a clearly labeled horizontal table scroll. Do not hide key fields without a way to inspect them.
 - Show loading skeletons, empty states, errors, and result counts. Use stable IDs in the table and human-readable names for actions.
-- Keep the Admin navigation distinct from the student service navigation. Restrict all four pages to Admins.
+- Restrict all four pages to Admins. The Admin navigation remains distinct from student and volunteer navigation.
 
 ### 9.5 MEg-aral scanned-PDF fallback
 
@@ -519,3 +611,73 @@ The Store manager screens may show current per-product and aggregate totals from
 ### 9.9 Station screens
 
 The Store and Borrow pages are the station interfaces. They use the same student login and permissions as the normal web app. A student signs in, completes the transaction, and logs out or completes the session. Physical device supervision and logout are staff procedures. Do not add kiosk mode, device auto-lock timers, station API keys, or isolated station sessions.
+
+### 9.10 Web mockup v1.0
+
+This section defines the first frontend-only mockup pass. Follow the existing M3 tokens, component rules, responsive behavior, accessibility requirements, and student flows in this document. The pasted reference screens are design references only; do not embed or ship the reference images in workflow files.
+
+#### Registration form
+
+The student registration form follows the supplied reference layout and includes:
+
+- First Name
+- Middle Initial
+- Surname
+- Student Number
+- Phone Number
+- College select
+- Degree Program select
+- UP Mail local part with a fixed `@up.edu.ph` suffix
+- Cancel and Register actions
+
+The form may also include the existing optional **Tap your UP ID to link it** field from sections 9.1 and 9.2. The RFID field is for account linking during registration; it is not repeated during borrowing or returning.
+
+#### Volunteer management workspaces
+
+Volunteer management screens are list-first workspaces, not card collections. Each workspace should provide:
+
+- A page title and a compact filter row or responsive filter drawer.
+- A searchable list/table of all available entries.
+- An **Add entry** button that opens an M3 form or dialog.
+- A row-level **Edit** or **Modify** action for the selected item.
+- Clear empty, loading, validation-error, and saved-success states.
+- Filters appropriate to the service, such as category, availability, visibility, status, date, and role.
+
+Apply this pattern to Manage Store, Manage Borrowables, Manage Reviewers, Manage Events, and Manage Queue. Use dense list rows for repeated operational records; reserve cards for genuinely framed tools or compact summary statistics.
+
+For the first mockup, adding a new Store product must work without a database connection. Persist mockup products in browser storage under a versioned namespace such as `messentials.mockup.v1.store.products`. Reloading the page must retain added and modified products. This is mockup-only state and must not be presented as production persistence.
+
+#### Admin dashboard
+
+The Admin dashboard follows the supplied admin reference layout: a persistent left navigation rail, page title, compact filters, sortable table headers, pagination, and a wide operational data table. Recreate the information architecture and density of the reference, but apply this guide's M3 colors, typography, spacing, focus states, accessible labels, and responsive behavior. Do not embed the reference image or copy its browser-default visual styling.
+
+The four mockup pages remain Usage Logs, Students, Volunteers, and Admins. Each page needs filter, sort, empty, loading, and error states. On narrow screens, move filters into the M3 filter drawer and use a readable stacked-row or scrollable-table treatment.
+
+#### Event form builder
+
+The Manage Events mockup includes a Google Forms-like builder. A manager can:
+
+- Start from a blank event-registration template.
+- Add any number of question/statement blocks.
+- Choose an answer field for each block, such as short text, paragraph, single choice, multiple choice, checkbox, or date.
+- Mark fields required or optional.
+- Reorder, edit, duplicate, and remove blocks.
+- Preview the student-facing registration form.
+
+The blank template automatically includes Student Name and Student Number. When a signed-in student answers the form, values that the system already knows, such as the student's name and number, are prefilled and treated as default values rather than requiring repeated entry. A manager can add event-specific questions around these default fields.
+
+#### Queue mockup
+
+For webmockup v1.0, the queue needs only a general visual treatment: session title, open/closed state, venue, current queue position, approximate queue length, adviser/desk placeholder, and primary actions to join, leave, continue, or call the next student. Detailed adviser routing and operational edge cases can remain represented by simple states and do not need a complete interaction design yet.
+
+#### Borrow and return flow
+
+The mockup follows the existing flow of selecting a borrowable unit, choosing Borrow or Return, confirming the action, and showing the result. Do not show a second RFID scan in either flow. The student is already identified by the authenticated session or by the RFID login that preceded the flow; the unit is selected by its visible label or catalog identifier.
+
+#### Account settings and notifications
+
+Notification settings are a separate section inside Account/Profile settings. Include per-device alert status and a clear link labeled **Enable alerts on iOS** or equivalent. The link targets a separate iOS Web Push instruction page, but that instruction page may be omitted from the webmockup v1.0 screen set. Keep the link visible in the account-settings mockup and preserve the existing `/notifications` and `/profile` push states when those screens are mocked.
+
+#### Missing-screen design rule
+
+For screens without a supplied design, create a simple M3 layout using the established shell, tokens, list/form patterns, spacing, and states. Prefer predictable operational interfaces over decorative composition. Keep the previously defined flows intact and do not invent ticketing, academic-year calculations, camera QR scanning, kiosk controls, or other excluded features for this mockup version.
