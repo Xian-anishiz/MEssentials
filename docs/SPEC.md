@@ -12,7 +12,7 @@ Companion files:
 
 This file covers behavior, data, APIs, uploads, background jobs, and notifications.
 
-Items marked **[ASSUMPTION]** are not stated in the project files. Confirm before changing them. They are collected in section 14.
+Items marked **[ASSUMPTION]** are not stated in the project files or your answers. Confirm or change them. They are collected in section 14.
 
 ---
 
@@ -35,14 +35,14 @@ MEssentials is one web app for the DME student services that today are spread ac
 
 - Responsive web app built with SvelteKit and Tailwind CSS. Desktop uses the 80px navigation rail and 360px filter panel; viewports below 768px use an M3 bottom navigation bar and a modal filter drawer.
 - Three actor groups: Student, Volunteer (five manager roles), Administrator.
-- Account creation and identity proof through Google OAuth with a verified `@up.edu.ph` address. Students may set an optional local password after signing in with UP Mail.
+- Three student login methods: Google UP Mail (primary), registered RFID card tap, and username/email plus an optional local password. New accounts are created through verified Google UP Mail; students may then link an RFID card and set a local password.
 - Store, borrowing, reviewer, events, and registration queue features, each with student and manager functions.
 - In-app notifications (the notification tab) and web push notifications.
 - A student-to-volunteer message system.
 - File upload for reviewers and images.
 - Background jobs in a PostgreSQL `jobs` table, claimed by a separate worker with `FOR UPDATE SKIP LOCKED`.
 - Standard browser sessions on physical stations. Students sign in, complete the transaction, and log out or finish the session under the site’s human operating protocol; there is no kiosk mode, station account type, device lockout engine, or station-specific API token in v1.
-- USB HID keyboard-emulation ID/barcode scanning for student identity. Dynamic QR generation and camera-based QR scanning are deferred; unit labels and stored `qr_code` strings remain catalog identifiers only.
+- USB HID keyboard-emulation RFID scanning for student login and student identification during borrowing/return. A student taps their UP ID; the reader types its configured card identifier into a focused field and sends Enter. Students link the card to their own account during registration or later in Profile. Dynamic QR generation and camera-based QR scanning are deferred; unit labels and stored `qr_code` strings remain catalog identifiers only.
 - Scanned-PDF detection and manager-entered tags/summaries so image-only reviewers remain searchable without OCR.
 
 ### 1.3 Out of scope (this release)
@@ -309,10 +309,15 @@ CREATE TABLE users (
   password_hash text,                            -- optional Argon2id password
   google_sub text NOT NULL UNIQUE,               -- every account is linked to Google identity
   first_name text,
+  middle_initial text,
   last_name text,
   student_number text UNIQUE,
+  phone_number text,
+  college text,
+  degree_program text,
+  is_active boolean NOT NULL DEFAULT true,
+  is_enrolled boolean NOT NULL DEFAULT true,
   entry_year smallint CHECK (entry_year BETWEEN 2000 AND 2100),  -- academic year the student entered; standing is derived
-  id_card_code text UNIQUE,                      -- value read by the ID scanner [ASSUMPTION]
   avatar_key text,                               -- R2 key
   is_admin boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -320,6 +325,24 @@ CREATE TABLE users (
   deleted_at timestamptz,
   CHECK (google_sub IS NOT NULL)
 );
+
+-- RFID cards are login credentials. Store a protected digest of the scanner output,
+-- not the raw card value. One active card identifier can belong to one account.
+CREATE TABLE student_rfid_cards (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  identifier_hash text NOT NULL UNIQUE,       -- HMAC-SHA-256 using a server-side pepper
+  display_suffix text,                        -- optional masked hint for the student's profile
+  registered_at timestamptz NOT NULL DEFAULT now(),
+  last_used_at timestamptz,
+  revoked_at timestamptz,
+  revoked_reason text
+);
+CREATE INDEX student_rfid_cards_user_active
+  ON student_rfid_cards (user_id) WHERE revoked_at IS NULL;
+-- Enforce one active RFID card per student for v1.
+CREATE UNIQUE INDEX one_active_rfid_card_per_student
+  ON student_rfid_cards (user_id) WHERE revoked_at IS NULL;
 
 CREATE TABLE volunteer_roles (
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -848,7 +871,7 @@ The schema is in 3NF, with BCNF for all key-based tables. These are deliberate e
 | 500 | `INTERNAL` |
 
 Rate limits **[ASSUMPTION]**:
-- **Local-password login failures** are stored in `auth_throttle` so they survive restarts and work across instances. Rule: 5 failures per account identifier or per IP within 15 minutes locks that key for 15 minutes. After 3 failures, require a Turnstile token. Apply a separate modest limit to OAuth start/callback and account creation to reduce abuse; Google remains the identity provider.
+- **Local-password and RFID login failures** are stored in `auth_throttle` so they survive restarts and work across instances. Rule: 5 failures per account identifier/card digest or per IP within 15 minutes locks that key for 15 minutes. After 3 failures, require a Turnstile token for password login; RFID login remains rate-limited and returns a generic failure. Apply a separate modest limit to OAuth start/callback and account creation to reduce abuse; Google remains the primary identity provider.
 - **Other limits** (scan verify 10 per minute per session, search 60 per minute per session, everything else 300 per minute per session) use an in-memory limiter in each web instance for a single-instance deployment. With several instances, move them to Postgres or a shared limiter. Message sending is limited to 20 per hour per user **[ASSUMPTION]**.
 
 ### 6.1.1 Idempotency for state-changing requests
@@ -869,7 +892,10 @@ Apply this to store checkout, borrow, return, event registration, queue joining,
 |---|---|---|---|
 | GET | `/auth/google` | Public | Start Google OAuth. Optional `intent=signup` may be used for UI copy; it does not change the identity checks. |
 | GET | `/auth/google/callback` | Public | Validate Google identity, create or find the account, and set the session. |
-| POST | `/auth/login` | Public | Optional local-password login. Body `{ email, password, turnstileToken? }`. |
+| POST | `/auth/login` | Public | Local-password login. Body `{ identifier, password, turnstileToken? }`; identifier accepts username or email. |
+| POST | `/auth/rfid/login` | Public | RFID login. Body `{ scannedIdentifier }`; hash the value server-side and find one active card link. Do not return account-existence details. |
+| POST | `/auth/rfid/register` | User | Link a card to the signed-in student's account. Body `{ scannedIdentifier }`; require recent UP Mail re-authentication or current password before adding/replacing a card. |
+| DELETE | `/auth/rfid/card` | User | Revoke the student's active card. Require a fresh authentication step. |
 | POST | `/auth/password/set` | User | Set a password for a Google-authenticated account that has no password. Body `{ newPassword }`; require recent Google re-authentication. |
 | POST | `/auth/password/change` | User | Change a local password. Body `{ currentPassword, newPassword }`; require current password or recent Google re-authentication. |
 | POST | `/auth/logout` | User | Deletes the current session. |
@@ -888,9 +914,19 @@ There is no password-only registration route, email-verification route, recovery
 5. If no account exists, create it with the verified email and Google subject. Profile fields remain optional until the student completes the profile.
 6. Create a session and send the student to the app. All successfully created accounts have the same base student permissions.
 
+**RFID login and card linking**
+
+- Google UP Mail is the primary sign-in and account creation method. A student must first create an account through a verified Google `@up.edu.ph` identity.
+- During the registration/profile setup form, the student taps their UP ID while the RFID field is focused. The HID reader types the card identifier and sends Enter. The frontend submits the scanned value to the backend; it must not treat the typed value as trusted until the backend validates and stores its digest.
+- The student may also link or replace a card later in Profile. Require a recent Google re-authentication or current local password for linking, replacing, or revoking a card.
+- RFID login accepts the scanned identifier, computes its HMAC-SHA-256 digest with a server-side secret, finds the matching non-revoked card, and creates a normal student session. The login page must not reveal whether a card is registered.
+- A lost card is revoked from Profile after UP Mail sign-in. A replacement card is then scanned and linked. Revocation takes effect for the next login attempt.
+- **Security trade-off:** v1 accepts UID-only RFID login as a bearer credential: possession of a readable/copiable card identifier is treated as proof of identity. Do not claim cryptographic card authentication. Rate-limit failed scans, log successful and failed attempts without storing raw identifiers, and provide immediate card revocation. Sensitive actions still use their normal authorization and confirmation checks.
+- The same linked card can identify a student during borrowing/return, but login and transaction authorization remain separate checks.
+
 **Optional local password**
 
-- Students may set a local password from Profile only after a successful UP Mail sign-in. Hash it with Argon2id.
+- Students may set a local password from Profile only after a successful UP Mail sign-in. Hash it with Argon2id. Local login accepts either username or email as the identifier.
 - A student who forgets the local password signs in with Google and uses the logged-in password-set flow. No recovery code or staff reset is needed.
 - A password change requires the current password or a fresh Google re-authentication within the configured step-up window. A normal old session alone is not enough.
 - After a password change, revoke all other sessions and keep only the current session. Record the change in the audit log.
@@ -1012,7 +1048,7 @@ Flow (matches the BorrowBorrowable and ReturnBorrowable swimlanes):
 1. Student selects an item, sees its units, picks one, and clicks Borrow or Return.
 2. For borrow, the student picks a return date (must be after now and at most `MAX_LOAN_DAYS` days ahead **[ASSUMPTION]**).
 3. The station prompts for an ID scan. The scanner sends the card code to `/borrowing/scans/verify`.
-4. Server looks up `users.id_card_code`.
+4. Server hashes the scanned RFID identifier and looks up the active row in `student_rfid_cards`.
    - No match: `422 SCAN_INVALID`. The UI prompts for a rescan.
    - For return, if the scanned student is not the borrower: `422 SCAN_WRONG_STUDENT`.
    - Match: return the student profile and `scanToken` (signed, bound to unit, purpose, and borrower).
@@ -1146,7 +1182,7 @@ Staff account tools (`registration_manager` or Admin):
 | Method | Path | Description |
 |---|---|---|
 | GET | `/staff/accounts` | Search accounts by name, username, email, or student number. Query: `q`, page. |
-| PUT | `/staff/accounts/:id/id-card` | Body `{ idCardCode }`. Link or update the physical card code after staff inspect the UP ID. This is for borrow/return scanning only; it does not verify the account or change permissions. |
+| GET | `/staff/accounts` | Admin/authorized staff | View student account and linked RFID-card status; no staff-side account verification or normal card-linking action. |
 
 Every call writes an `audit_logs` row. Staff cannot use these routes on their own account or on an admin account unless they are an admin **[ASSUMPTION]**.
 
@@ -1466,8 +1502,8 @@ Page routes follow the rail order in the design: Store, Borrow, Reviewer, Events
 
 | Route | Screen | API used |
 |---|---|---|
-| `/login` | Continue with Google UP Mail; optional local password login for accounts that set one | `/auth/*` |
-| `/signup` | Start Google UP Mail sign-in; account is created after successful OAuth | `/auth/google*` |
+| `/login` | Three methods: Continue with UP Mail (primary), tap registered RFID card, or username/email and password | `/auth/*` |
+| `/signup` | UP Mail OAuth account creation followed by student profile form and UP ID tap to link RFID card; card linking may be skipped and completed later | `/auth/google*`, `/auth/rfid/*`, `/profile*` |
 | `/store` | Product grid + filters + cart | `/store/*` |
 | `/borrow` | Loan stats, on loan list, available list | `/borrowables`, `/borrowing/*` |
 | `/reviewer` | Reviewer list + filters | `/reviewers*`, `/courses` |
@@ -1475,12 +1511,16 @@ Page routes follow the rail order in the design: Store, Borrow, Reviewer, Events
 | `/register` | Queue position, next steps | `/registration/queue*` |
 | `/notifications` | Notification list, push opt-in banner | `/notifications*`, `/push/*` |
 | `/messages` | Inbox and compose | `/messages*` |
-| `/profile` | Profile, optional local password setup/change, notification settings, device alerts | `/profile*`, `/auth/*`, `/push/*` |
+| `/profile` | Profile, optional local password setup/change, linked RFID card status/link/revoke, notification settings, device alerts | `/profile*`, `/auth/*`, `/push/*` |
 | `/manage/store`, `/manage/borrow`, `/manage/reviewer`, `/manage/events`, `/manage/registration` | Manager tools (role-gated) | service manager routes |
 | `/staff/accounts` | Link physical ID cards for borrowing/return scanning | `/staff/*` |
 | `/admin/users` | Roles and privileges | `/admin/*` |
+| `/admin/usage-logs` | Usage logs with service and date filters | `/admin/usage-logs*` |
+| `/admin/students` | Student directory with college/program/status/number filters | `/admin/students*` |
+| `/admin/services` | Service catalog and in-use status | `/admin/services*` |
+| `/admin/admins` | Administrator directory and active status | `/admin/admins*` |
 
-Use `+layout.server.ts` to load the session and block pages by role. Account creation already proves UP Mail identity; profile completion checks remain specific to workflows that need profile data. Client navigation keeps the rail visible.
+Use `+layout.server.ts` to load the session and block pages by role. Account creation already proves UP Mail identity; profile completion checks remain specific to workflows that need profile data. Client navigation keeps the rail visible. The Admin area includes Usage Logs, Students, Services, and Admins directory pages; their fields and filters are defined in `UI_DESIGN.md` section 9.4.
 
 ---
 
@@ -1500,7 +1540,7 @@ Use `+layout.server.ts` to load the session and block pages by role. Account cre
 **Security**
 - Argon2id for passwords. Session tokens stored hashed. Constant-time compares.
 - Turnstile after repeated local-password login failures. Durable lockouts in `auth_throttle`; apply rate limits to OAuth entry and callback endpoints.
-- Every account must have a Google-verified `@up.edu.ph` identity. Optional local passwords are set or changed only after Google sign-in or current-password verification.
+- Every account must have a Google-verified `@up.edu.ph` identity. Students can also log in with a linked RFID card or username/email and password. RFID UID-only login is a documented bearer-credential trade-off; support revocation, rate limits, audit events, and re-linking. Optional local passwords are set or changed only after Google sign-in or current-password verification.
 - Validate and escape all input. Parameterized queries only.
 - Row-level access in code: students read only their own notifications, messages, loans, and queue entry.
 - Never expose other students' data in queue or registrant views to students.
@@ -1562,7 +1602,7 @@ The plan includes a Migration phase (4 days). Import from the existing Google Sh
 The following operational details still need confirmation. Core identity and v1 scope decisions stated as confirmed below are not open choices.
 
 1. **Station operating protocol (confirmed scope).** Stations use the standard web app in a browser. A student signs in, completes the transaction, and logs out or finishes the session. Physical supervision and device security are handled by staff. There is no kiosk state engine, station account type, device auto-lockout, or station-specific API token in v1.
-2. **Scanner and item-code scope (confirmed scope).** Use USB HID keyboard-emulation ID/barcode scanner hardware for student identity. It types the card code into a focused field and sends Enter. The stored `id_card_code` is linked during staff verification. Borrowable units keep a plaintext human-readable label and a `qr_code` text identifier in PostgreSQL. Dynamic QR image generation and camera scanning are deferred; no QR camera workflow is required for v1.
+2. **Scanner and item-code scope (confirmed scope).** Use USB HID keyboard-emulation RFID reader hardware for student identity and login. It types the card identifier into a focused field and sends Enter. The student links the card to their own account while signed in through UP Mail; the protected digest is stored in `student_rfid_cards`. The same card can identify the student for borrowing/return. Borrowable units keep a plaintext human-readable label and a `qr_code` text identifier in PostgreSQL. Dynamic QR image generation and camera scanning are deferred; no QR camera workflow is required for v1.
 3. **Image size limit.** The 50 MB PDF/Image example is applied to both PDFs and images. Image size may be reduced to 5 MB by changing `MAX_UPLOAD_IMAGE_BYTES`; this remains an operational choice.
 4. **Image storage.** You named R2 for reviewer files. This spec also stores product, event, borrowable, and avatar images in R2.
 5. **Hosting.** Web app and worker hosting is not chosen. The worker needs an always-on process (a small VM or container) and the `pdftotext` binary. Serverless-only hosting will not work for the worker. An alternative is Supabase `pg_cron` calling a protected endpoint every minute, but long PDF extraction could hit time limits.
@@ -1585,3 +1625,15 @@ The following operational details still need confirmation. Core identity and v1 
 23. **Web push delivery.** Push is best effort and depends on browser permission and supported platform installation. In-app notifications remain the source of truth.
 24. **Mutation replay protection.** Sensitive state-changing endpoints require `Idempotency-Key`; responses and writes are committed in one transaction. Retain keys for at least 24 hours **[ASSUMPTION]**. UI loading/disabled states supplement, but do not replace, server and database controls.
 24. **Worker hosting.** A separate always-on Node worker is the preferred deployment. A protected scheduled endpoint is a fallback only if its execution limits can safely handle PDF extraction.
+
+
+## 16. Admin dashboard data contract (Revision 5)
+
+The Admin dashboard includes four directory/report pages. These pages are separate from the service-manager tools and must be role-gated to Administrators.
+
+- **Usage Logs:** Filters: Service Type, Date Range Start, Date Range End. Table columns: Usage Log ID, Service ID, Service Type, Student Number, Admin ID, Date Time Start, Date Time End, Location. Date filters include time-zone-aware date/time values. Empty results show a clear empty state; pagination and sortable columns are required.
+- **Students:** Filters: College Programs, Colleges, Is Active, Is Enrolled, Min Student Number, Max Student Number. Table columns: Student Number, First Name, Middle Initial, Last Name, Email, Phone Number, College, Program. `Is Active` and `Is Enrolled` are separate states and must not be conflated. Student number range filters use the stored student-number format and must be validated before querying.
+- **Services:** Filters: Service Type and In Use. Table columns: Service ID, Service Name, Service Type, In Use. `In Use` means whether the service is currently enabled/available in MEssentials, not whether a student is using it at that moment.
+- **Admins:** Filter: Is Active. Table columns: Admin ID, Nickname, Is Active. Admin status and account active status must be shown distinctly if they can differ.
+
+All four pages use server-side filtering, sorting, and pagination. Apply the Material Design 3 visual rules in `UI_DESIGN.md`; the screenshots define the data fields and filter concepts, not a replacement visual system. Do not expose private student fields to non-admin users. Log admin changes to service availability and admin privileges.

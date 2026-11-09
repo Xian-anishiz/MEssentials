@@ -334,3 +334,60 @@ This section records the later decisions that supersede earlier authentication a
 | Search | GIN full-text ranking plus relational tag/course filters |
 | Double-click/retry protection | Idempotency keys plus database transactions and constraints |
 | Key retention | At least 24 hours; operational assumption to validate |
+
+
+---
+
+# Revision 5 — RFID login and Admin dashboard fields
+
+This revision incorporates the latest RFID login decision and the supplied registration/Admin dashboard screenshots. It supersedes the earlier Revision 4 note that limited the scanned ID code to borrowing/return identity checks.
+
+## 1. Authentication methods
+
+- **Decision:** MEssentials offers three login methods: Google UP Mail (primary), RFID card tap, and username/email plus local password.
+- **Account creation:** Students first establish an account through verified Google OAuth with an exact `@up.edu.ph` domain. RFID and local password are linked after account creation.
+- **RFID login:** A student taps their registered UP ID. The USB HID reader types the identifier into the focused field and sends Enter. The backend hashes the received value, looks up the active card link, and creates a normal student session.
+- **Security trade-off:** RFID-only login treats the card identifier as a bearer credential. It is not cryptographic card authentication. A lost or copied identifier may be used to sign in. v1 mitigations are rate limiting, generic errors, audit events, protected identifier storage, and student-controlled revocation/replacement.
+- **Local login:** Username or email plus the optional Argon2id password. UP Mail remains the primary account creation and recovery path.
+
+## 2. Student card-linking workflow
+
+- Student signs in through UP Mail.
+- Student completes the registration/profile fields: first name, middle initial, surname, student number, phone number, college, degree program, and UP Mail username.
+- Student taps the UP ID while the RFID input is focused. The reader types the card identifier and sends Enter.
+- The student submits the form; the backend links the card to the authenticated account and rejects a card already linked to another active account.
+- The student may skip card linking and do it later in Profile.
+- To replace a lost card, the student signs in with UP Mail, revokes the old card, and taps the replacement card.
+- The system stores an HMAC-SHA-256 digest of the card identifier using a server-side secret, not the raw value. One active card per student and one account per active card are enforced.
+
+## 3. Roles and staff process
+
+- Students register their own RFID card to their own authenticated account.
+- Staff can help with scanner issues but no longer perform account verification or issue temporary passwords.
+- The same card can be used for borrowing/return identification, but transaction permissions remain separate from login.
+
+## 4. Admin dashboard information architecture
+
+The supplied screenshots add four Admin pages and define their data fields. Their visual style must follow Material Design 3, not copy the screenshot styling.
+
+| Page | Filters | Table columns |
+|---|---|---|
+| Usage Logs | Service Type; Date Range Start; Date Range End | Usage Log ID; Service ID; Service Type; Student Number; Admin ID; Date Time Start; Date Time End; Location |
+| Students | College Programs; Colleges; Is Active; Is Enrolled; Min Student Number; Max Student Number | Student Number; First Name; Middle Initial; Last Name; Email; Phone Number; College; Program |
+| Services | Service Type; In Use | Service ID; Service Name; Service Type; In Use |
+| Admins | Is Active | Admin ID; Nickname; Is Active |
+
+The pages require server-side filters, sorting, and pagination, plus M3 loading, empty, and error states. Active and enrolled are separate student attributes. Service `In Use` means enabled/available in the app.
+
+## 5. Files changed
+
+- `SPEC.md`: login options, RFID card table, registration and revocation routes, rate limits, auth rules, dashboard data contract, and routes.
+- `UI_DESIGN.md`: student card-linking form and the four M3 Admin dashboard pages.
+- `messentials_user_roles_responsibilities.md`: student self-linking workflow, revised staff duties, and Admin dashboard responsibilities.
+
+## 6. Assumptions to validate
+
+- The RFID reader sends a stable card identifier and appends Enter. Confirm the reader's output format and whether it can be configured to send Enter.
+- The scanner's identifier is suitable for use as a lookup secret only under the accepted UID-only risk. If the reader emits a public, cloneable UID, the documented risk remains.
+- The exact student number format and whether min/max comparisons are numeric or lexical must be confirmed before implementation.
+- Confirm the source of `Is Enrolled` and `Is Active` values and the service status rule for `In Use`.
