@@ -33,6 +33,10 @@ Students see these five service destinations:
 
 A card that has not been linked cannot log in. A card already linked to another active account cannot be linked again. The system stores a protected digest of the scanned identifier, not the raw value. RFID-only login is a deliberate convenience trade-off: a lost or copied card identifier may be used by another person. The system must support rate limits, audit logs, and card revocation.
 
+### Aside: RFID
+
+- This is not functional unless you have an RFID reader.
+
 ---
 
 ## 2. Volunteer (Service Manager)
