@@ -81,8 +81,8 @@
           
           <div class="flex flex-col gap-1.5">
             <label for="upmail-local" class="text-sm font-medium text-on-surface-variant">UP Mail Username</label>
-            <div class="flex items-center">
-              <input id="upmail-local" type="text" bind:value={emailLocal} class="h-12 px-4 rounded-l-m3-sm bg-surface-variant/40 border border-outline-variant text-on-surface text-base focus:outline-none flex-1" />
+            <div class="flex items-center w-full min-w-0">
+              <input id="upmail-local" type="text" bind:value={emailLocal} class="h-12 px-4 rounded-l-m3-sm bg-surface-variant/40 border border-outline-variant text-on-surface text-base focus:outline-none flex-1 min-w-0" />
               <span class="h-12 px-3 flex items-center bg-surface-variant text-on-surface-variant text-sm font-medium rounded-r-m3-sm border border-l-0 border-outline-variant">@up.edu.ph</span>
             </div>
           </div>
