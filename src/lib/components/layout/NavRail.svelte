@@ -1,10 +1,16 @@
 <script lang="ts">
   import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import { notificationsState } from '$stores/notifications.svelte';
   import { authState } from '$stores/auth.svelte';
 
   const unreadCount = $derived(notificationsState.unreadCount);
   const currentPath = $derived($page.url.pathname);
+
+  function handleLogout() {
+    authState.logout();
+    goto('/login');
+  }
 </script>
 
 <aside class="hidden md:flex w-rail shrink-0 flex-col items-center justify-between py-6 bg-background border-r border-outline-variant/30 select-none">
@@ -71,5 +77,18 @@
       </span>
       <span class="text-[11px] font-medium tracking-[0.5px] text-on-surface">Profile</span>
     </a>
+
+    <!-- Logout -->
+    <button
+      type="button"
+      onclick={handleLogout}
+      class="mt-2 flex flex-col items-center gap-1 group text-on-surface-variant hover:text-error"
+      title="Log Out"
+    >
+      <span class="size-10 flex items-center justify-center rounded-m3-full border border-outline-variant/40 transition-colors text-on-surface-variant group-hover:bg-error/10 group-hover:text-error">
+        <span class="material-symbols-outlined text-[20px]">logout</span>
+      </span>
+      <span class="text-[11px] font-medium tracking-[0.5px]">Log Out</span>
+    </button>
   </div>
 </aside>

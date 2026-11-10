@@ -1,6 +1,8 @@
 <script lang="ts">
   import { page } from '$app/state';
-  
+  import { goto } from '$app/navigation';
+  import { authState } from '$stores/auth.svelte';
+
   let { isOpen = false, onClose }: { isOpen: boolean, onClose: () => void } = $props();
 
   const navItems = [
@@ -12,6 +14,12 @@
     { label: 'Notifications', href: '/notifications', icon: 'notifications' },
     { label: 'Profile', href: '/profile', icon: 'person' },
   ];
+
+  function handleLogout() {
+    onClose();
+    authState.logout();
+    goto('/login');
+  }
 </script>
 
 {#if isOpen}
@@ -31,8 +39,8 @@
       <nav class="flex flex-col gap-2">
         {#each navItems as item}
           {@const isActive = page.url.pathname === item.href}
-          <a 
-            href={item.href} 
+          <a
+            href={item.href}
             onclick={onClose}
             class={`flex items-center gap-4 px-4 py-3 rounded-m3-full text-base font-medium transition-colors ${isActive ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface-variant hover:bg-surface-variant'}`}
           >
@@ -41,6 +49,16 @@
           </a>
         {/each}
       </nav>
+      <div class="mt-auto pt-4 border-t border-outline-variant/30">
+        <button
+          type="button"
+          onclick={handleLogout}
+          class="w-full flex items-center gap-4 px-4 py-3 rounded-m3-full text-base font-medium text-error hover:bg-error/10 transition-colors"
+        >
+          <span class="material-symbols-outlined">logout</span>
+          Log Out
+        </button>
+      </div>
     </div>
   </div>
 {/if}
