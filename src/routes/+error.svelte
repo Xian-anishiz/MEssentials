@@ -17,8 +17,8 @@
     500: 'Server Error'
   };
 
-  const title = titleMap[status] || 'Error';
-  const statusText = error?.message || 'An error occurred';
+  const title = $derived(titleMap[status] || 'Error');
+  const statusText = $derived(error?.message || 'An error occurred');
 </script>
 
 <svelte:head>

@@ -23,6 +23,42 @@ export function createQueueState() {
         position: 15,
         queueLength: 135
       };
+    },
+    setSessionOpen(open: boolean) {
+      if (open) {
+        queue = {
+          ...queue,
+          sessionOpen: true,
+          nowServing: null,
+          status: 'waiting',
+          inQueue: true,
+          queueLength: queue.queueLength + 1,
+          queueNumber: queue.queueLength + 1,
+          position: queue.queueLength + 1
+        };
+      } else {
+        queue = {
+          ...queue,
+          sessionOpen: false,
+          inQueue: false,
+          status: 'left',
+          position: null,
+          queueNumber: null
+        };
+      }
+    },
+    advanceQueue() {
+      if (!queue.sessionOpen) return;
+      const serving = queue.nowServing !== null ? queue.nowServing + 1 : (queue.queueNumber ?? 1);
+      queue = {
+        ...queue,
+        nowServing: serving,
+        position: queue.position !== null && queue.position > 1 ? queue.position - 1 : queue.position,
+        queueLength: Math.max(0, queue.queueLength - 1)
+      };
+    },
+    updateQueueFields(fields: Partial<QueueStatus>) {
+      queue = { ...queue, ...fields };
     }
   };
 }

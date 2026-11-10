@@ -2,10 +2,13 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { authState } from '$stores/auth.svelte';
+  import type { VolunteerRole } from '$mocks/volunteers';
 
   let { isOpen = false, onClose }: { isOpen: boolean, onClose: () => void } = $props();
 
-  const navItems = [
+  type NavItem = { label: string; href: string; icon: string };
+
+  const studentNavItems: NavItem[] = [
     { label: 'Store', href: '/store', icon: 'shopping_cart' },
     { label: 'Borrow', href: '/borrow', icon: 'library_books' },
     { label: 'Reviewer', href: '/reviewer', icon: 'book' },
@@ -14,6 +17,34 @@
     { label: 'Notifications', href: '/notifications', icon: 'notifications' },
     { label: 'Profile', href: '/profile', icon: 'person' },
   ];
+
+  const sharedTailItems: NavItem[] = [
+    { label: 'Notifications', href: '/notifications', icon: 'notifications' },
+    { label: 'Profile', href: '/profile', icon: 'person' },
+  ];
+
+  const roleManagerPages: Record<VolunteerRole, NavItem> = {
+    store_manager: { label: 'Store Manager', href: '/volunteers/store', icon: 'shopping_cart' },
+    kailangan_manager: { label: 'Borrow Manager', href: '/volunteers/borrow', icon: 'library_books' },
+    megaral_manager: { label: 'Reviewer Manager', href: '/volunteers/reviewers', icon: 'book' },
+    medays_manager: { label: 'Events Manager', href: '/volunteers/events', icon: 'calendar_today' },
+    registration_manager: { label: 'Queue Manager', href: '/volunteers/queue', icon: 'badge' }
+  };
+
+  const navItems = $derived<NavItem[]>(
+    authState.user.role === 'volunteer'
+      ? [
+          { label: 'My Roles', href: '/volunteers', icon: 'volunteer_activism' },
+          ...(((authState.user.volunteerRoles ?? []) as VolunteerRole[]).map(r => roleManagerPages[r])),
+          ...sharedTailItems
+        ]
+      : studentNavItems
+  );
+
+  function isActive(item: NavItem): boolean {
+    if (item.href === '/volunteers') return page.url.pathname === '/volunteers';
+    return page.url.pathname.startsWith(item.href);
+  }
 
   function handleLogout() {
     onClose();
@@ -29,7 +60,7 @@
       class="absolute inset-0 bg-black/40 cursor-default"
       onclick={onClose}
     ></button>
-    <div class="relative w-[280px] bg-surface h-full flex flex-col p-6 shadow-m3-2 z-10" aria-label="Navigation menu">
+    <div class="relative w-[280px] bg-surface h-full flex flex-col p-6 shadow-m3-2 z-10 overflow-y-auto" aria-label="Navigation menu">
       <div class="flex items-center justify-between pb-4 mb-4 border-b border-outline-variant">
         <h2 class="text-xl font-medium text-on-surface">MEssentials</h2>
         <button onclick={onClose} class="p-2">
@@ -37,12 +68,11 @@
         </button>
       </div>
       <nav class="flex flex-col gap-2">
-        {#each navItems as item}
-          {@const isActive = page.url.pathname === item.href}
+        {#each navItems as item (item.href)}
           <a
             href={item.href}
             onclick={onClose}
-            class={`flex items-center gap-4 px-4 py-3 rounded-m3-full text-base font-medium transition-colors ${isActive ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface-variant hover:bg-surface-variant'}`}
+            class={`flex items-center gap-4 px-4 py-3 rounded-m3-full text-base font-medium transition-colors ${isActive(item) ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface-variant hover:bg-surface-variant'}`}
           >
             <span class="material-symbols-outlined">{item.icon}</span>
             {item.label}

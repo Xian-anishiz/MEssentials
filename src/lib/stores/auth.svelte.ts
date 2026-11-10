@@ -1,12 +1,13 @@
-import { MOCK_USER, type UserProfile } from '$mocks/user';
+import { MOCK_ACCOUNTS, type AccountType, type UserProfile } from '$mocks/user';
 
 export function createAuthState() {
-  let user = $state<UserProfile>(MOCK_USER);
-  let isLoggedIn = $state<boolean>(true);
+  let user = $state<UserProfile>(MOCK_ACCOUNTS.student);
+  let isLoggedIn = $state<boolean>(false);
 
   return {
     get user() { return user; },
     get isLoggedIn() { return isLoggedIn; },
+    get accountType() { return user.role; },
     updateProfile(updated: Partial<UserProfile>) {
       user = { ...user, ...updated };
     },
@@ -19,8 +20,13 @@ export function createAuthState() {
     togglePush(enabled: boolean) {
       user = { ...user, pushEnabled: enabled };
     },
+    loginAs(type: AccountType) {
+      user = MOCK_ACCOUNTS[type];
+      isLoggedIn = true;
+    },
     logout() {
       isLoggedIn = false;
+      user = MOCK_ACCOUNTS.student;
     },
     login() {
       isLoggedIn = true;

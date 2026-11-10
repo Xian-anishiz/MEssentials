@@ -1,4 +1,4 @@
-import { INITIAL_PRODUCTS, type Product } from '$mocks/products';
+import { MOCK_PRODUCTS, type Product } from '$mocks/products';
 
 const STORAGE_KEY = 'messentials.mockup.v1.store.products';
 
@@ -8,7 +8,7 @@ export interface CartItem {
 }
 
 export function createStoreState() {
-  let products = $state<Product[]>(INITIAL_PRODUCTS);
+  let products = $state<Product[]>(MOCK_PRODUCTS);
   let cart = $state<Map<string, number>>(new Map());
 
   // Load from browser storage if available

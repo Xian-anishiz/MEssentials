@@ -1,6 +1,5 @@
 <script lang="ts">
   import '../app.css';
-  import AdminNavRail from '$components/admin/AdminNavRail.svelte';
   import MobileNavDrawer from '$components/layout/MobileNavDrawer.svelte';
   import NavRail from '$components/layout/NavRail.svelte'
   import { page } from '$app/stores';
@@ -9,7 +8,10 @@
   let { children }: Props = $props();
   let isMobileMenuOpen = $state(false);
 
-  const isAuthRoute = $derived($page.url.pathname === '/login' || $page.url.pathname === '/signup');
+  const isAuthRoute = $derived(
+    $page.url.pathname === '/login' || $page.url.pathname === '/signup' ||
+    $page.url.pathname === '/volunteers/login' || $page.url.pathname === '/admin/login'
+  );
   const isAdminRoute = $derived($page.url.pathname.startsWith('/admin'));
   const isErrorRoute = $derived($page.error !== null);
 </script>
@@ -22,14 +24,8 @@
   {@render children?.()}
   
 {:else if isAdminRoute}
-  <div class="flex h-screen bg-background overflow-hidden">
-    <AdminNavRail />
-    <main class="flex-1 flex flex-col md:my-4 md:mx-4 md:rounded-m3-xl bg-surface overflow-hidden md:shadow-m3-1 md:border md:border-outline-variant/30">
-      <div class="flex-1 flex flex-col min-w-0 overflow-y-auto p-4">
-        {@render children?.()}
-      </div>
-    </main>
-  </div>
+  <!-- Admin pages have their own shell in /admin/+layout.svelte -->
+  {@render children?.()}
 
 {:else if isErrorRoute}
   <div class="flex flex-1 flex-row align-middle justify-center h-screen bg-background overflow-hidden">
@@ -43,7 +39,7 @@
     <main class="flex-1 flex flex-col md:my-4 md:mx-4 md:rounded-m3-xl bg-surface overflow-hidden md:shadow-m3-1 md:border md:border-outline-variant/30">
       <div class="md:hidden">
         <div class="flex items-center justify-between p-4 bg-surface border-b border-outline-variant">
-          <button aria-label="Open navigation menu" class="size-10 flex items-center justify-center rounded-m3-full hover:bg-surface-variant transition-colors">
+          <button aria-label="Open navigation menu" class="size-10 flex items-center justify-center rounded-m3-full hover:bg-surface-variant transition-colors" onclick={() => isMobileMenuOpen = true}>
             <span class="material-symbols-outlined">menu</span>
           </button>
           <div class="flex items-center gap-2">
@@ -64,4 +60,6 @@
       </div>
     </main>
   </div>
+
+  <MobileNavDrawer isOpen={isMobileMenuOpen} onClose={() => isMobileMenuOpen = false} />
 {/if}

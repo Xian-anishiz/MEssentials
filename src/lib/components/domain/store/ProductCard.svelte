@@ -25,7 +25,7 @@
 <article class="rounded-m3-lg border border-outline-variant/60 overflow-hidden bg-surface hover:border-primary transition-colors flex flex-col">
   <div class="aspect-[4/3] bg-surface-variant flex items-center justify-center text-on-surface-variant relative">
     <span class="material-symbols-outlined text-[48px] text-outline-variant">shopping_bag</span>
-    <span class="absolute top-3 right-3 rounded-m3-sm bg-surface/90 px-2 py-0.5 text-xs font-medium text-on-surface">Stock: {product.stock}</span>
+    <span class="absolute top-3 right-3 rounded-m3-sm bg-surface/90 px-2 py-0.5 text-xs font-medium text-on-surface">Stock: {product.quantity}</span>
   </div>
   <div class="p-4 flex flex-col gap-3 flex-1 justify-between">
     <div class="flex items-start justify-between gap-2">

@@ -17,7 +17,7 @@ export function createReviewerState() {
           const bookmarkedIds = new Set(
             parsed.filter(r => r.bookmarked).map(r => r.id)
           );
-          reviewers = reviewers.map(r =>
+          reviewers = MOCK_REVIEWERS.map(r =>
             bookmarkedIds.size > 0 && bookmarkedIds.has(r.id) ? { ...r, bookmarked: true } : r
           );
         }
@@ -47,6 +47,21 @@ export function createReviewerState() {
     },
     updateManualSummary(id: string, summary: string) {
       reviewers = reviewers.map(r => r.id === id ? { ...r, manualSummary: summary } : r);
+    },
+    addReviewer(fields: { title: string; courseCode: string; description: string; tags: string[] }) {
+      if (!fields.title.trim()) return;
+      reviewers = [...reviewers, {
+        id: 'rev_' + Math.random().toString(36).substr(2, 9),
+        title: fields.title.trim(),
+        authors: ['DME Volcorps Academics'],
+        description: fields.description.trim(),
+        courseCode: fields.courseCode.trim(),
+        tags: fields.tags,
+        fileSize: `${(Math.random() * 14 + 1).toFixed(1)} MB`,
+        hasSelectableText: true,
+        bookmarked: false,
+        publishedAt: new Date().toISOString().split('T')[0]
+      }];
     }
   };
 }

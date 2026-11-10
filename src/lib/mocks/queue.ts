@@ -1,7 +1,8 @@
 export interface QueueStatus {
-  inQueue: boolean;
   sessionName: string;
   sessionOpen: boolean;
+  nowServing: number | null;
+  inQueue: boolean;
   queueNumber: number | null;
   position: number | null;
   queueLength: number;
@@ -12,9 +13,10 @@ export interface QueueStatus {
 }
 
 export const MOCK_QUEUE: QueueStatus = {
-  inQueue: true,
   sessionName: 'AY 2026-2027 Sem 2 - Advising & Clearance',
   sessionOpen: true,
+  nowServing: 106,
+  inQueue: true,
   queueNumber: 120,
   position: 14,
   queueLength: 134,

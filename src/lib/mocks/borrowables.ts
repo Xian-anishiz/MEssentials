@@ -91,3 +91,7 @@ export const INITIAL_LOANS: LoanRecord[] = [
     status: 'active'
   }
 ];
+
+// Alias for consistency with other mock files
+export const MOCK_BORROWABLES = INITIAL_BORROWABLES;
+export const MOCK_LOANS = INITIAL_LOANS;
