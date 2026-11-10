@@ -2,6 +2,7 @@
   import '../app.css';
   import AdminNavRail from '$components/admin/AdminNavRail.svelte';
   import MobileNavDrawer from '$components/layout/MobileNavDrawer.svelte';
+  import NavRail from '$components/layout/NavRail.svelte'
   import { page } from '$app/stores';
 
   type Props = { children?: import('svelte').Snippet };
@@ -10,6 +11,7 @@
 
   const isAuthRoute = $derived($page.url.pathname === '/login' || $page.url.pathname === '/signup');
   const isAdminRoute = $derived($page.url.pathname.startsWith('/admin'));
+  const isErrorRoute = $derived($page.error !== null);
 </script>
 
 <svelte:head>
@@ -18,6 +20,7 @@
 
 {#if isAuthRoute}
   {@render children?.()}
+  
 {:else if isAdminRoute}
   <div class="flex h-screen bg-background overflow-hidden">
     <AdminNavRail />
@@ -27,57 +30,15 @@
       </div>
     </main>
   </div>
+
+{:else if isErrorRoute}
+  <div class="flex flex-1 flex-row align-middle justify-center h-screen bg-background overflow-hidden">
+    {@render children?.()}
+  </div>
+
 {:else}
   <div class="flex h-screen bg-background overflow-hidden">
-    <aside class="hidden md:flex w-rail shrink-0 flex-col items-center justify-between py-6 bg-background border-r border-outline-variant/30 select-none">
-      <nav class="flex flex-col items-center gap-4">
-        <a href="/store" class="flex flex-col items-center gap-1 group" title="Store">
-          <span class="h-8 w-14 flex items-center justify-center rounded-m3-full text-on-surface-variant hover:bg-primary/10">
-            <span class="material-symbols-outlined text-[24px]">shopping_cart</span>
-          </span>
-          <span class="text-[11px] font-medium tracking-[0.5px] text-on-surface">Store</span>
-        </a>
-        <a href="/events" class="flex flex-col items-center gap-1 group" title="Events">
-          <span class="h-8 w-14 flex items-center justify-center rounded-m3-full text-on-surface-variant hover:bg-primary/10">
-            <span class="material-symbols-outlined text-[24px]">calendar_today</span>
-          </span>
-          <span class="text-[11px] font-medium tracking-[0.5px] text-on-surface">Events</span>
-        </a>
-        <a href="/borrow" class="flex flex-col items-center gap-1 group" title="Borrow">
-          <span class="h-8 w-14 flex items-center justify-center rounded-m3-full text-on-surface-variant hover:bg-primary/10">
-            <span class="material-symbols-outlined text-[24px]">library_books</span>
-          </span>
-          <span class="text-[11px] font-medium tracking-[0.5px] text-on-surface">Borrow</span>
-        </a>
-        <a href="/reviewer" class="flex flex-col items-center gap-1 group" title="Reviewer">
-          <span class="h-8 w-14 flex items-center justify-center rounded-m3-full text-on-surface-variant hover:bg-primary/10">
-            <span class="material-symbols-outlined text-[24px]">book</span>
-          </span>
-          <span class="text-[11px] font-medium tracking-[0.5px] text-on-surface">Reviewer</span>
-        </a>
-        <a href="/register" class="flex flex-col items-center gap-1 group" title="Register">
-          <span class="h-8 w-14 flex items-center justify-center rounded-m3-full text-on-surface-variant hover:bg-primary/10">
-            <span class="material-symbols-outlined text-[24px]">badge</span>
-          </span>
-          <span class="text-[11px] font-medium tracking-[0.5px] text-on-surface">Register</span>
-        </a>
-      </nav>
-
-      <div class="flex flex-col items-center gap-4">
-        <a href="/notifications" class="relative flex flex-col items-center gap-1 group" title="Notifications">
-          <span class="h-8 w-14 flex items-center justify-center rounded-m3-full text-on-surface-variant hover:bg-primary/10">
-            <span class="material-symbols-outlined text-[24px]">notifications</span>
-          </span>
-          <span class="text-[11px] font-medium tracking-[0.5px] text-on-surface">Alerts</span>
-        </a>
-        <a href="/profile" class="flex flex-col items-center gap-1 group" title="Profile">
-          <span class="size-10 flex items-center justify-center rounded-m3-full bg-primary-container text-on-primary-container">
-            <span class="material-symbols-outlined text-[20px]">person</span>
-          </span>
-          <span class="text-[11px] font-medium tracking-[0.5px] text-on-surface">Profile</span>
-        </a>
-      </div>
-    </aside>
+    <NavRail />
 
     <main class="flex-1 flex flex-col md:my-4 md:mx-4 md:rounded-m3-xl bg-surface overflow-hidden md:shadow-m3-1 md:border md:border-outline-variant/30">
       <div class="md:hidden">
