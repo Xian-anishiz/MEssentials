@@ -10,15 +10,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "lib": ["esnext", "dom", "dom.iterable"],
-    "types": ["svelte", "@sveltejs/kit"],
-    "paths": {
-      "$lib": ["./src/lib"],
-      "$lib/*": ["./src/lib/*"],
-      "$components/*": ["./src/lib/components/*"],
-      "$mocks/*": ["./src/lib/mocks/*"],
-      "$stores/*": ["./src/lib/stores/*"],
-      "$types/*": ["./src/lib/types/*"]
-    }
+    "types": ["svelte", "@sveltejs/kit"]
   },
   "include": ["src/**/*"],
   "extends": "./.svelte-kit/tsconfig.json"

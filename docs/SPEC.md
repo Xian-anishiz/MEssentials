@@ -138,10 +138,10 @@ scripts/
 
 ### 2.3 pnpm setup
 
-- Install pnpm through Corepack: `corepack enable`. Pin the version in `package.json`: `"packageManager": "pnpm@<version>"` (use the current pnpm 10.x release).
+- Install pnpm through Corepack: `corepack enable`. Pin the version in `package.json`: `"packageManager": "pnpm@<version>"` (use the current pnpm 12.x release).
 - Commit `pnpm-lock.yaml`. In CI and on the server use `pnpm install --frozen-lockfile`.
 - Set `"engines": { "node": ">=22" }` **[ASSUMPTION]** and add `.npmrc` with `engine-strict=true`.
-- pnpm 10 blocks dependency build scripts by default. If a package needs one, list it in `package.json` under `pnpm.onlyBuiltDependencies`. `@node-rs/argon2` ships prebuilt binaries, so it needs none.
+- pnpm 12 blocks dependency build scripts by default. If a package needs one, list it in `package.json` under `pnpm.onlyBuiltDependencies`. `@node-rs/argon2` ships prebuilt binaries, so it needs none.
 - Scripts:
 
 | Script | Purpose |
