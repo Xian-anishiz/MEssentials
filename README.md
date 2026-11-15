@@ -81,51 +81,32 @@ Copy `.env.example` to `.env` and fill in only the values you need. See `docs/DE
 
 This currently contains the Mock web design UI that currently only contains the user-student side dashboard. Future developments will include more complicated features. Some of the details are under revisions. This is not the final product.
 
-### v1.0
+### 🛠 Tech Stack
 
-- [x] Navigation (Desktop NavRail + Mobile Header + Hamburger Drawer; bottom nav removed)
-- [x] Pages: Store, Borrow, Reviewer, Registration, Events, Notifications, Profile, Login/Signup
-- [x] Mock data and reactiveness
-- [x] Interactive UI design
+- Frontend: SvelteKit, TypeScript, Tailwind CSS, Material 3 Design Tokens
+- Backend & DB: Supabase (PostgreSQL), Drizzle ORM
+- Deployment: Vercel (Node.js 22.x runtime)
 
-### v1.1
+### 📱 Core Application (v1.x)
 
-- [x] Admin Dashboard implementation (AdminNavRail, AdminTable, Pagination, RoleBadge components)
-- [x] Admin Pages - Usage Logs, Students, Volunteers, Admins (with mock data)
-- [x] Admin filter bars standardized (filters left, search + Reset right via ml-auto) and sentinel filters fixed
-- [x] AdminNavRail Dashboard active-state fixed (exact match for /admin)
-- [x] Select dropdowns auto-apply filters (Select onchange prop)
-- [x] Volunteers Grant Role modal working (student picker, role checkboxes, merge/add volunteer, per-role revoke)
-- [x] Column sorting on all admin tables (SortableTh component)
+- Responsive App Shell: Fully accessible, mobile-optimized layout with adaptive navigation (Desktop NavRail and Mobile Drawer).
+- Multi-Role Authentication: Dedicated portals for Students, Volunteers, and Admins supporting Google OAuth, RFID tap, and standard login.
 
-# Main Features
-## 1. Student
+Student Services:
+- Store & Borrow: Product catalog with filtering, responsive cart/checkout, and unit-tracked borrowing/returning.
+- Reviewer Hub: Academic resource repository with search, preview modals, and persistent bookmarks.
+- ME Days & Queuing: Event registration forms and live queue position tracking.
+ - Profile: Editable profiles with RFID linking and push notification management.
 
-Every account is a student account. A student may also hold one or more volunteer roles or Administrator status.
+Admin & Volunteer Portals:
+ - Volunteer Dashboards: Role-specific management pages for Store, Borrow, Events, Queue, and Reviewer managers.
+- Admin Dashboard: Comprehensive data tables (Usage Logs, Students, Volunteers, Admins) featuring column sorting, reactive filters, and pagination.
+- Access Control: UI for granular role assignment, revoking, and user merging.
 
----
-
-## 2. Volunteer (Service Manager)
-
-A Volunteer is a student with one or more service-manager roles. Volunteers keep the normal student dashboard and gain extra management links for their assigned roles. Management links open separate editing workspaces; they do not replace the student-facing service pages.
-
----
-
-## 3. Administrator
-
-Administrators have system-level permissions, including the powers of all service-manager roles. However, their navigation is a separate Admin dashboard. They do not use the normal Store, Events, Borrow, Reviewer, or Register dashboard as their Admin home.
-
----
-
-## 4. Navigation summary
-
-| Actor | Main navigation | Additional navigation |
-|---|---|---|
-| Student | Store, Events, Borrow, Reviewer, Register | None |
-| Volunteer | Store, Events, Borrow, Reviewer, Register | Management links for assigned roles |
-| Administrator | Usage Logs, Students, Volunteers, Admins | No normal student-service navigation |
-
-The role controls which links appear, but it does not replace server-side authorization. Every management route and API must check the user's role. For more information see [user_roles.md](docs/user_roles.md)
+### 🗄 Backend Foundation (v2.x)
+- Database Setup: PostgreSQL connection established via Supabase.
+- Schema Configuration: Base tables configured via Drizzle ORM (users, sessions, volunteer_roles, auth_throttle) with defined service-manager enums.
+- Migrations: Initial ORM migrations generated and successfully applied.
 
 # Acknowledgements
 
