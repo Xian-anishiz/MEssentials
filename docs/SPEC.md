@@ -289,6 +289,8 @@ The role-based navigation is a presentation rule, not an authorization boundary.
 
 ## 5. Database Schema
 
+> **Authoritative copy:** the complete database design below is now maintained in `docs/database_implementation.md` (section 2), which is the official source for database-related work. The copy in this SPEC is retained as a synchronized snapshot; propose schema changes there first.
+
 PostgreSQL. All ids are `uuid` with `default gen_random_uuid()` unless noted. All tables have `created_at timestamptz not null default now()`. Mutable tables also have `updated_at`. Money uses PostgreSQL `numeric(10,2)` and is displayed in Philippine pesos (₱).
 
 Extensions: `pgcrypto` (or built-in `gen_random_uuid`), `citext`, `pg_trgm` (optional, for fuzzy search).
