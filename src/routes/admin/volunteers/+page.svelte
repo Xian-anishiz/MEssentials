@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import Pagination from '$components/admin/Pagination.svelte';
   import SortableTh from '$components/admin/SortableTh.svelte';
   import Select from '$components/ui/Select.svelte';
@@ -8,37 +9,80 @@
   import Button from '$components/ui/Button.svelte';
   import Modal from '$components/ui/Modal.svelte';
   import RoleBadge from '$components/admin/RoleBadge.svelte';
-  import { MOCK_VOLUNTEERS, type VolunteerProfile, type VolunteerRole } from '$mocks/volunteers';
-  import { MOCK_STUDENTS } from '$mocks/students';
 
-  let allVolunteers = $state<VolunteerProfile[]>([]);
-  let filteredVolunteers = $state<VolunteerProfile[]>([]);
+  type VolunteerRole = 'store_manager' | 'kailangan_manager' | 'megaral_manager' | 'medays_manager' | 'registration_manager';
+
+  interface VolunteerUser {
+    studentNumber: string;
+    firstName: string;
+    middleInitial: string;
+    lastName: string;
+    email: string;
+    emailUsername: string;
+    phone: string;
+    college: string;
+    degreeProgram: string;
+    volunteerRoles: VolunteerRole[];
+    isActive: boolean;
+  }
+
+  interface PageData {
+    volunteers: VolunteerUser[];
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+    filters: { role: string; college: string; activeOnly: boolean; search: string };
+    sort: { sortKey: string; sortDirection: 'asc' | 'desc' };
+    colleges: string[];
+    volunteerRoles: VolunteerRole[];
+    roleLabels: Record<VolunteerRole, string>;
+  }
+
+  let allVolunteers = $state<VolunteerUser[]>([]);
+  let filteredVolunteers = $state<VolunteerUser[]>([]);
   let filters = $state({ role: '', college: '', activeOnly: false, search: '' });
   let sortKey = $state<string>('lastName');
   let sortDirection = $state<'asc' | 'desc'>('asc');
   let currentPage = $state(1);
+  let totalPages = $state(1);
+  let totalItems = $state(0);
+  let colleges = $state<string[]>([]);
+  let volunteerRoles = $state<VolunteerRole[]>([]);
+  let roleLabels = $state<Record<VolunteerRole, string>>({} as Record<VolunteerRole, string>);
   const pageSize = 10;
 
   let grantModalOpen = $state(false);
   let grantTargetLabel = $state('');
   let selectedRoles = $state<VolunteerRole[]>([]);
 
-  const totalPages = $derived(Math.ceil(filteredVolunteers.length / pageSize) || 1);
-  const paginatedVolunteers = $derived(filteredVolunteers.slice((currentPage - 1) * pageSize, currentPage * pageSize));
-
-  onMount(() => {
-    allVolunteers = MOCK_VOLUNTEERS;
-    applyFilters();
+  // Initialize from server data
+  $effect.root(() => {
+    $effect(() => {
+      const data = $page.data as PageData;
+      allVolunteers = data.volunteers;
+      totalItems = data.totalItems;
+      totalPages = data.totalPages;
+      currentPage = data.currentPage;
+      filters = data.filters;
+      sortKey = data.sort.sortKey;
+      sortDirection = data.sort.sortDirection;
+      colleges = data.colleges;
+      volunteerRoles = data.volunteerRoles;
+      roleLabels = data.roleLabels;
+      applyFilters();
+    });
   });
+
+  const paginatedVolunteers = $derived(filteredVolunteers.slice((currentPage - 1) * pageSize, currentPage * pageSize));
 
   function applyFilters() {
     let result = [...allVolunteers];
-    const collegeFilter = filters.college === 'All Colleges' ? '' : filters.college;
-    const roleFilter = (!filters.role || filters.role === 'All Roles')
-      ? ''
-      : ((Object.entries(roleLabels).find(([, label]) => label === filters.role)?.[0] as VolunteerRole | undefined) ?? '');
-    if (roleFilter) result = result.filter(v => v.volunteerRoles.includes(roleFilter));
-    if (collegeFilter) result = result.filter(v => v.college === collegeFilter);
+    if (filters.role) {
+      const roleKey = Object.entries(roleLabels).find(([, label]) => label === filters.role)?.[0] as VolunteerRole | undefined;
+      if (roleKey) result = result.filter(v => v.volunteerRoles.includes(roleKey));
+    }
+    if (filters.college) result = result.filter(v => v.college === filters.college);
     if (filters.activeOnly) result = result.filter(v => v.isActive);
     if (filters.search) {
       const search = filters.search.toLowerCase();
@@ -52,7 +96,7 @@
         return sortDirection === 'asc' ? cmp : -cmp;
       });
     } else {
-      result.sort((a, b) => { const aVal = a[sortKey as keyof VolunteerProfile]; const bVal = b[sortKey as keyof VolunteerProfile]; if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1; if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1; return 0; });
+      result.sort((a, b) => { const aVal = a[sortKey as keyof VolunteerUser]; const bVal = b[sortKey as keyof VolunteerUser]; if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1; if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1; return 0; });
     }
     filteredVolunteers = result;
     currentPage = 1;
@@ -65,13 +109,23 @@
       sortKey = key;
       sortDirection = 'asc';
     }
-    applyFilters();
+    updateUrlAndReload();
   }
-  function handleSearch(value: string) { filters.search = value; applyFilters(); }
-  function resetFilters() { filters = { role: '', college: '', activeOnly: false, search: '' }; applyFilters(); }
 
-  const volunteerRoles: VolunteerRole[] = ['store_manager', 'kailangan_manager', 'megaral_manager', 'medays_manager', 'registration_manager'];
-  const roleLabels: Record<VolunteerRole, string> = { store_manager: 'Store Manager', kailangan_manager: 'Borrow Manager', megaral_manager: 'Reviewer Manager', medays_manager: 'Events Manager', registration_manager: 'Queue Manager' };
+  function updateUrlAndReload() {
+    const params = new URLSearchParams();
+    params.set('page', String(currentPage));
+    if (filters.role) params.set('role', filters.role);
+    if (filters.college) params.set('college', filters.college);
+    if (filters.activeOnly) params.set('activeOnly', 'true');
+    if (filters.search) params.set('search', filters.search);
+    params.set('sortKey', sortKey);
+    params.set('sortDirection', sortDirection);
+    goto(`/admin/volunteers?${params.toString()}`);
+  }
+
+  function handleSearch(value: string) { filters.search = value; updateUrlAndReload(); }
+  function resetFilters() { filters = { role: '', college: '', activeOnly: false, search: '' }; currentPage = 1; updateUrlAndReload(); }
 
   function grantRole(label: string, role: VolunteerRole) {
     const num = label.match(/\((\d{4}-\d+)\)/)?.[1];
@@ -88,6 +142,7 @@
         firstName: student.firstName,
         middleInitial: student.middleInitial,
         lastName: student.lastName,
+        email: `${student.emailUsername}@up.edu.ph`,
         emailUsername: student.emailUsername,
         phone: student.phone,
         college: student.college,
@@ -99,21 +154,21 @@
     applyFilters();
   }
 
-  function revokeRole(vol: VolunteerProfile, role: VolunteerRole) {
+  function revokeRole(vol: VolunteerUser, role: VolunteerRole) {
     allVolunteers = allVolunteers.map(v => v.studentNumber === vol.studentNumber ? { ...v, volunteerRoles: v.volunteerRoles.filter(r => r !== role) } : v);
     applyFilters();
   }
 
   function openGrantModal() { grantTargetLabel = ''; selectedRoles = []; grantModalOpen = true; }
 
-  type GrantCandidate = Pick<VolunteerProfile, 'studentNumber' | 'firstName' | 'middleInitial' | 'lastName' | 'emailUsername' | 'phone' | 'college' | 'degreeProgram'>;
+  type GrantCandidate = Pick<VolunteerUser, 'studentNumber' | 'firstName' | 'middleInitial' | 'lastName' | 'emailUsername' | 'phone' | 'college' | 'degreeProgram'>;
 
   const grantCandidates = $derived.by(() => {
     const byNumber = new Map<string, GrantCandidate>();
     const toCandidate = (s: { studentNumber: string; firstName: string; middleInitial: string; lastName: string; emailUsername: string; phone: string; college: string; degreeProgram: string }): GrantCandidate =>
       ({ studentNumber: s.studentNumber, firstName: s.firstName, middleInitial: s.middleInitial, lastName: s.lastName, emailUsername: s.emailUsername, phone: s.phone, college: s.college, degreeProgram: s.degreeProgram });
     for (const v of allVolunteers) byNumber.set(v.studentNumber, toCandidate(v));
-    for (const s of MOCK_STUDENTS) if (!byNumber.has(s.studentNumber)) byNumber.set(s.studentNumber, toCandidate(s));
+    // TODO: Also include students who aren't volunteers yet (would need to fetch from students table)
     return [...byNumber.values()].sort((a, b) => a.lastName.localeCompare(b.lastName));
   });
 
@@ -146,13 +201,13 @@
   <div class="flex flex-col lg:flex-row lg:items-end gap-3 lg:gap-4 p-4 bg-surface-container/50 rounded-m3-xl border border-outline-variant/30">
     <div class="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
       <div class="sm:w-48 shrink-0">
-        <Select label="Role" bind:value={filters.role} options={['All Roles', ...volunteerRoles.map(r => roleLabels[r])]} onchange={() => applyFilters()} />
+        <Select label="Role" bind:value={filters.role} options={['All Roles', ...volunteerRoles.map(r => roleLabels[r])]} onchange={updateUrlAndReload} />
       </div>
       <div class="sm:w-56 shrink-0">
-        <Select label="College" bind:value={filters.college} options={['All Colleges', 'College of Engineering']} onchange={() => applyFilters()} />
+        <Select label="College" bind:value={filters.college} options={['All Colleges', ...colleges]} onchange={updateUrlAndReload} />
       </div>
       <div class="pb-1 sm:pb-2.5">
-        <Checkbox label="Active only" bind:checked={filters.activeOnly} onchange={applyFilters} />
+        <Checkbox label="Active only" bind:checked={filters.activeOnly} onchange={updateUrlAndReload} />
       </div>
     </div>
     <div class="flex items-end gap-3 lg:ml-auto">
@@ -209,7 +264,7 @@
     </table>
   </div>
   {#if filteredVolunteers.length > 0}
-    <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredVolunteers.length} pageSize={pageSize} onPageChange={(page) => currentPage = page} />
+    <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={(page) => { currentPage = page; updateUrlAndReload(); }} />
   {/if}
 </div>
 

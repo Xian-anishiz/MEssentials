@@ -1,26 +1,61 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import AdminTable from '$components/admin/AdminTable.svelte';
+  import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import Pagination from '$components/admin/Pagination.svelte';
   import SortableTh from '$components/admin/SortableTh.svelte';
   import Select from '$components/ui/Select.svelte';
   import SearchInput from '$components/ui/SearchInput.svelte';
-  import { MOCK_USAGE_LOGS, type UsageLog } from '$mocks/usageLogs';
 
-  interface FilterState { serviceType: string; dateFrom: string; dateTo: string; search: string; }
+  interface UsageLog {
+    logId: string;
+    serviceId: string;
+    serviceType: 'Store' | 'Events' | 'Borrow' | 'Reviewer' | 'Register';
+    studentNumber: string;
+    adminId: string | null;
+    dateTimeStart: string;
+    dateTimeEnd: string;
+    location: string;
+  }
+
+  interface PageData {
+    logs: UsageLog[];
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+    filters: { serviceType: string; dateFrom: string; dateTo: string; search: string };
+    sort: { sortKey: string; sortDirection: 'asc' | 'desc' };
+    serviceTypes: string[];
+  }
 
   let allLogs = $state<UsageLog[]>([]);
   let filteredLogs = $state<UsageLog[]>([]);
-  let filters = $state<FilterState>({ serviceType: '', dateFrom: '', dateTo: '', search: '' });
+  let filters = $state({ serviceType: '', dateFrom: '', dateTo: '', search: '' });
   let sortKey = $state<string>('dateTimeStart');
   let sortDirection = $state<'asc' | 'desc'>('desc');
   let currentPage = $state(1);
+  let totalPages = $state(1);
+  let totalItems = $state(0);
+  let serviceTypes = $state<string[]>([]);
   const pageSize = 10;
 
-  const totalPages = $derived(Math.ceil(filteredLogs.length / pageSize) || 1);
-  const paginatedLogs = $derived(filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize));
+  // Initialize from server data
+  $effect.root(() => {
+    $effect(() => {
+      const data = $page.data as PageData;
+      allLogs = data.logs;
+      totalItems = data.totalItems;
+      totalPages = data.totalPages;
+      currentPage = data.currentPage;
+      filters = data.filters;
+      sortKey = data.sort.sortKey;
+      sortDirection = data.sort.sortDirection;
+      serviceTypes = data.serviceTypes;
+      applyFilters();
+    });
+  });
 
-  onMount(() => { allLogs = MOCK_USAGE_LOGS; applyFilters(); });
+  const paginatedLogs = $derived(filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize));
 
   function applyFilters() {
     let result = [...allLogs];
@@ -42,12 +77,24 @@
       sortKey = key;
       sortDirection = 'asc';
     }
-    applyFilters();
+    updateUrlAndReload();
   }
-  function handleSearch(value: string) { filters.search = value; applyFilters(); }
-  function resetFilters() { filters = { serviceType: '', dateFrom: '', dateTo: '', search: '' }; applyFilters(); }
+
+  function updateUrlAndReload() {
+    const params = new URLSearchParams();
+    params.set('page', String(currentPage));
+    if (filters.serviceType) params.set('serviceType', filters.serviceType);
+    if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
+    if (filters.dateTo) params.set('dateTo', filters.dateTo);
+    if (filters.search) params.set('search', filters.search);
+    params.set('sortKey', sortKey);
+    params.set('sortDirection', sortDirection);
+    goto(`/admin/usage-logs?${params.toString()}`);
+  }
+
+  function handleSearch(value: string) { filters.search = value; updateUrlAndReload(); }
+  function resetFilters() { filters = { serviceType: '', dateFrom: '', dateTo: '', search: '' }; currentPage = 1; updateUrlAndReload(); }
   function formatDateTime(dt: string): string { const date = new Date(dt); return date.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
-  const serviceTypes = ['All Services', 'Store', 'Events', 'Borrow', 'Reviewer', 'Register'];
 </script>
 <svelte:head><title>Usage Logs — Admin</title></svelte:head>
 
@@ -58,19 +105,19 @@
   <div class="flex flex-col lg:flex-row lg:items-end gap-3 lg:gap-4 p-4 bg-surface-container/50 rounded-m3-xl border border-outline-variant/30">
     <div class="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
       <div class="sm:w-48 shrink-0">
-        <Select label="Service Type" bind:value={filters.serviceType} options={serviceTypes} onchange={() => applyFilters()} />
+        <Select label="Service Type" bind:value={filters.serviceType} options={serviceTypes} onchange={updateUrlAndReload} />
       </div>
       <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
         <div class="flex flex-col gap-1.5 sm:w-44">
           <label class="contents">
             <span class="text-sm font-medium text-on-surface-variant">Date From</span>
-            <input type="date" bind:value={filters.dateFrom} onchange={applyFilters} class="h-14 w-full rounded-m3-sm border border-outline bg-surface px-4 text-base text-on-surface" />
+            <input type="date" bind:value={filters.dateFrom} onchange={updateUrlAndReload} class="h-14 w-full rounded-m3-sm border border-outline bg-surface px-4 text-base text-on-surface" />
           </label>
         </div>
         <div class="flex flex-col gap-1.5 sm:w-44">
           <label class="contents">
             <span class="text-sm font-medium text-on-surface-variant">Date To</span>
-            <input type="date" bind:value={filters.dateTo} onchange={applyFilters} class="h-14 w-full rounded-m3-sm border border-outline bg-surface px-4 text-base text-on-surface" />
+            <input type="date" bind:value={filters.dateTo} onchange={updateUrlAndReload} class="h-14 w-full rounded-m3-sm border border-outline bg-surface px-4 text-base text-on-surface" />
           </label>
         </div>
       </div>
@@ -111,6 +158,6 @@
     </table>
   </div>
   {#if filteredLogs.length > 0}
-    <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredLogs.length} pageSize={pageSize} onPageChange={(page) => currentPage = page} />
+    <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={(page) => { currentPage = page; updateUrlAndReload(); }} />
   {/if}
 </div>
