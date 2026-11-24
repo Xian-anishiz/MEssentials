@@ -4,7 +4,9 @@
   import { authState } from '$stores/auth.svelte';
   import type { VolunteerRole } from '$mocks/volunteers';
 
-  let { isOpen = false, onClose }: { isOpen: boolean, onClose: () => void } = $props();
+  let { isOpen = false, onClose, variant = 'auto' }: { isOpen: boolean; onClose: () => void; variant?: 'auto' | 'admin' } = $props();
+
+  const isAdminNav = $derived(variant === 'admin' || authState.user.role === 'admin');
 
   type NavItem = { label: string; href: string; icon: string };
 
@@ -35,7 +37,7 @@
   };
 
   const navItems = $derived<NavItem[]>(
-    authState.user.role === 'admin'
+    isAdminNav
       ? adminNavItems
       : authState.user.role === 'volunteer'
         ? [
@@ -52,11 +54,22 @@
     return page.url.pathname.startsWith(item.href);
   }
 
-  function handleLogout() {
-    const wasAdmin = authState.user.role === 'admin';
+  async function handleLogout() {
+    const wasAdmin = isAdminNav;
     onClose();
+
+    if (wasAdmin) {
+      try {
+        await fetch('/admin/logout', { method: 'POST' });
+      } finally {
+        authState.logout();
+        await goto('/admin/login');
+      }
+      return;
+    }
+
     authState.logout();
-    goto(wasAdmin ? '/admin/login' : '/login');
+    await goto('/login');
   }
 </script>
 

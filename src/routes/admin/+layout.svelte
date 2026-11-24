@@ -33,5 +33,5 @@
     </main>
   </div>
 
-  <MobileNavDrawer isOpen={isMobileMenuOpen} onClose={() => isMobileMenuOpen = false} />
+  <MobileNavDrawer isOpen={isMobileMenuOpen} onClose={() => isMobileMenuOpen = false} variant="admin" />
 {/if}

@@ -3,17 +3,21 @@
     label,
     value = $bindable(''),
     type = 'text',
+    name = '',
     placeholder = '',
     required = false,
     readonly = false,
+    autocomplete = undefined,
     oninput
   }: {
     label: string;
     value?: string | number;
     type?: string;
+    name?: string;
     placeholder?: string;
     required?: boolean;
     readonly?: boolean;
+    autocomplete?: import('svelte/elements').HTMLInputAttributes['autocomplete'];
     oninput?: (val: string) => void;
   } = $props();
 </script>
@@ -27,9 +31,11 @@
     {/if}
     <input
       {type}
+      {name}
       {value}
       {placeholder}
       {readonly}
+      {autocomplete}
       aria-label={label ? undefined : 'Input field'}
       oninput={(e) => oninput?.(e.currentTarget.value)}
       class="h-12 px-4 rounded-m3-sm bg-surface-variant/40 border border-outline-variant text-on-surface text-base focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all disabled:opacity-50"

@@ -13,9 +13,13 @@
     { label: 'Admins', href: '/admin/admins', icon: 'admin_panel_settings' },
   ] as const;
 
-  function handleLogout() {
-    authState.logout();
-    goto('/login');
+  async function handleLogout() {
+    try {
+      await fetch('/admin/logout', { method: 'POST' });
+    } finally {
+      authState.logout();
+      await goto('/admin/login');
+    }
   }
 </script>
 
