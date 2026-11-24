@@ -349,14 +349,13 @@ CREATE TABLE reviewers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   title text NOT NULL,
   authors text[] NOT NULL DEFAULT '{}',          -- display only (section 2.11)
-  description text,
+  description text,                              -- manager-entered description/summary
   file_key text NOT NULL,                        -- R2 key of the PDF
   file_size_bytes bigint NOT NULL,
   preview_image_key text,
   visibility visibility NOT NULL DEFAULT 'hidden',
   index_status index_status NOT NULL DEFAULT 'pending',
   index_error text,
-  has_selectable_text boolean,                 -- false when extraction yields fewer than 50 meaningful characters
   search_vector tsvector,
   published_at timestamptz,
   created_by uuid REFERENCES users(id),
@@ -379,12 +378,8 @@ CREATE TABLE reviewer_courses (                  -- drives the Course 1/2/3 filt
   PRIMARY KEY (reviewer_id, course_id)
 );
 
-CREATE TABLE reviewer_texts (                    -- extracted text, kept out of the main table
-  reviewer_id uuid PRIMARY KEY REFERENCES reviewers(id) ON DELETE CASCADE,
-  content text NOT NULL DEFAULT '',
-  manual_summary text NOT NULL DEFAULT '',
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
+-- reviewer_texts table removed: no PDF text extraction in v1.
+-- Search relies entirely on manager-entered metadata: title, authors, tags, course codes, description.
 
 CREATE TABLE reviewer_bookmarks (
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -394,7 +389,7 @@ CREATE TABLE reviewer_bookmarks (
 );
 ```
 
-Search vector weights (set by the index job and refreshed after manager edits): title = A, tags/course codes = B, manual summary = B, extracted text = C. Build the tags/course-code text by joining the reviewer's linked `reviewer_tag_map` and `reviewer_courses` rows to their canonical names/codes; do not assume tags or courses are duplicate free-text columns on `reviewers`. The GIN vector supports keyword search and ranking. The relational tag and course tables support exact filter chips and counts; apply those filters with joins or `EXISTS` clauses in addition to the vector match. A scanned-PDF marker is stored separately from the text so the UI can explain why automatic text search has no extracted content.
+Search vector weights (set by the index job and refreshed after manager edits): title = A, authors = A, tags = B, course codes = B, description = C. Build the tags/course-code text by joining the reviewer's linked `reviewer_tag_map` and `reviewer_courses` rows to their canonical names/codes; do not assume tags or courses are duplicate free-text columns on `reviewers`. The GIN vector supports keyword search and ranking. The relational tag and course tables support exact filter chips and counts; apply those filters with joins or `EXISTS` clauses in addition to the vector match. **No PDF text extraction in v1** — search relies entirely on manager-entered metadata.
 
 ### 2.6 ME Days
 
@@ -586,7 +581,6 @@ The schema is in 3NF, with BCNF for all key-based tables. These are deliberate e
 | `events.participation_constraints` (jsonb) | Not atomic | Read and validated as one rule object by the app | If rules grow, add a constraints table |
 | `audit_logs.target_type`, `target_id`, `metadata` | Polymorphic target, loose metadata | An audit trail should not need a foreign key per table | None |
 | `queue_entries.notified_next_at` | Event timestamp stored next to state | Needed for exactly-once alerts | None |
-| `reviewer_texts.manual_summary` | Free text in a separate one-to-one extension row | Manager-entered fallback text is searchable and belongs to the reviewer text payload; it is not a repeating group | Normalize into versioned annotations only if multiple independent summaries or authors are needed |
 | Category and course names | Stored once in lookup tables (`product_categories`, `borrowable_categories`, `event_categories`, `courses`) and linked by ids | Prevents case variants and makes counts/renames consistent | Keep this pattern for new filter dimensions |
 | Registration venue | Stored in `registration_sessions.location`; `advisers.desk` stores only a desk label | Avoids duplicate venue facts across advisers | Add adviser-specific location only if advisers can serve at distinct venues within one session |
 
@@ -649,7 +643,7 @@ The **relational model** is used; no other database model (document, key-value, 
   - **Queue durability and concurrency** use PostgreSQL row locks (`FOR UPDATE SKIP LOCKED` for jobs; `SELECT … FOR UPDATE` for event capacity and unit borrowing), avoiding Redis/BullMQ.
   - **Rate limiting** uses the `auth_throttle` table instead of an in-memory store so limits survive restarts.
 
-Introduction to the system: PostgreSQL is an open-source object-relational DBMS with full ACID transactions, rich constraint types (CHECK, UNIQUE, partial indexes, FKs with referential actions), generated columns, enums, and advanced indexing (B-tree, GIN, partial). Supabase provides managed PostgreSQL with connection poolers (PgBouncer-style transaction and session modes) and is the confirmed hosting platform for MEssentials (Vercel hosts the web app; the worker deployment model is still unresolved).
+Introduction to the system: PostgreSQL is an open-source object-relational DBMS with full ACID transactions, rich constraint types (CHECK, UNIQUE, partial indexes, FKs with referential actions), generated columns, enums, and advanced indexing (B-tree, GIN, partial). Supabase provides managed PostgreSQL with connection poolers (PgBouncer-style transaction and session modes) and is the confirmed hosting platform for MEssentials (Vercel hosts the web app; **Fly.io Micro VM hosts the worker** — $5/mo free credit covers always-on deployment; no pdftotext needed).
 
 ### 3.4 Implementation status (Database Foundation V1)
 

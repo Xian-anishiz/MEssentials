@@ -279,13 +279,13 @@ To use the original baseline for planning, refer to those PDFs and their origina
 
 ## 7. Known open decisions (not silently guessed)
 
-The following remain operational choices or assumptions in `SPEC.md` section 14 and are centralized in `PROJECT_DEFINITIONS.md`: the final image upload cap; VAPID contact; Turnstile account setup; maximum active loans; loan duration; reminder lead time; queue alert position; rejoin policy for students who leave a queue; rate limits; idempotency-key retention; and final worker deployment model. Vercel is confirmed for the web application, and `up.edu.ph` is the only allowed sign-up domain.
+The following remain operational choices or assumptions in `SPEC.md` section 14 and are centralized in `PROJECT_DEFINITIONS.md`: the final image upload cap; VAPID contact; Turnstile account setup; maximum active loans; loan duration; reminder lead time; queue alert position; rejoin policy for students who leave a queue; rate limits; idempotency-key retention. Vercel is confirmed for the web application, and `up.edu.ph` is the only allowed sign-up domain. **Fly.io Micro VM is selected for the worker.**
 
 The scope refinements themselves are treated as decisions, not open questions: no kiosk automation, no QR camera/generation in v1, no external message fallback, no direct messaging in the draft, no advanced financial reports in v1, mobile behavior below 768px, and the scanned-PDF manual indexing fallback. The final product ticketing replacement is recorded but not included in the draft.
 
 ## 9. Current document updates
 
-- Vercel is the confirmed web application host; the worker deployment model remains TBD.
+- Vercel is the confirmed web application host; **Fly.io Micro VM is selected for the worker** ($5/mo free credit).
 - Sign-up is restricted to the exact `up.edu.ph` domain.
 - Academic-year calculation is removed. Forms may collect current year standing only when a workflow needs it.
 - Changeable values are centralized in `PROJECT_DEFINITIONS.md`.

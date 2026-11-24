@@ -161,25 +161,25 @@
 | Download | ⚠️ Mock | No real signed URLs |
 | Manager: upload PDF | ⚠️ Mock | No R2 upload |
 | Manager: edit metadata | ✅ | Browser localStorage (mock) |
-| Scanned PDF fallback (manual tags/summary) | ✅ UI only | No text extraction job |
+| **Manual metadata for search** | ✅ UI only | Manager enters title, authors, tags, course codes, description |
 
 ### Free Tier Limits → Production Impact
 | Limitation | Consequence |
 |------------|-------------|
 | **No real file storage** | PDFs not actually uploaded. |
-| **No text extraction** | `pdftotext` worker not deployed. |
+| **No automatic text extraction** | Search relies on manager-entered metadata only. |
 | **No search index** | GIN vector search not built. |
 | **5 GB egress** | PDF downloads (50 MB each) eat budget fast. |
-| **500 MB DB** | Reviewer metadata + extracted text. |
+| **500 MB DB** | Reviewer metadata + manual summaries. |
 
 ### To Make Production-Ready (Requires Pro + Worker + R2)
 | Task | Effort |
 |------|--------|
 | R2 bucket setup + CORS + signed URLs | Medium |
 | Direct-to-R2 upload flow (presign → PUT → complete) | Medium |
-| Background worker: `reviewer.index` job (pdftotext) | High |
-| Search vector generation + GIN index | Medium |
-| Scanned PDF detection + manual fallback UI | Low (UI done) |
+| Background worker: `reviewer.index` job (metadata-only, no pdftotext) | Low |
+| Search vector generation from manual fields (title, authors, tags, courses, description) | Medium |
+| Manual metadata UI (already done) | Low |
 
 ---
 
@@ -338,27 +338,28 @@
 | Worker client (`workerDb`) | ✅ Code ready |
 | Job handlers | ❌ Not implemented |
 | Scheduler (recurring jobs) | ❌ Not implemented |
-| Deployment target | ❌ Not chosen |
+| Deployment target | ✅ **Fly.io selected** |
 
 ### Free Tier Limits → Production Impact
 | Limitation | Consequence |
 |------------|-------------|
 | **Worker not deployed** | No reminders, no push, no indexing, no cleanup. |
 | **No always-on host** | Free tier has no compute for long-running process. |
-| **`pdftotext` binary** | Needs host with poppler-utils installed. |
 
-### Deployment Options (All Cost Money)
+### Deployment Options
 | Option | Est. Cost | Notes |
 |--------|-----------|-------|
-| **Fly.io / Railway / Render** | $5-10/mo | Small VM, always-on |
-| **Supabase Edge Functions** | Not suitable | Short timeout, no `pdftotext` |
-| **Vercel Cron + Serverless** | Not suitable | Max 60s, no persistent connections |
-| **Self-hosted (UP server)** | $0 (if available) | Needs IT approval, IPv6 |
+| **Fly.io (selected)** | **$0-5/mo** | **$5/mo free credit covers Micro VM**; always-on; IPv6; no `pdftotext` needed |
+| Railway / Render | $5-10/mo | Small VM, always-on |
+| Supabase Edge Functions | Not suitable | Short timeout, no persistent connections |
+| Vercel Cron + Serverless | Not suitable | Max 60s, no persistent connections |
+| Self-hosted (UP server) | $0 (if available) | Needs IT approval, IPv6 |
 
-### Recommended: **Fly.io Micro VM (~$5/mo)**
-- Persistent connection to Supabase direct
-- Can install `pdftotext`
-- Runs worker loop 24/7
+### Recommended: **Fly.io Micro VM (covered by $5/mo free credit)**
+- Persistent connection to Supabase direct (IPv6)
+- **No `pdftotext` needed** — reviewer indexing uses manual metadata only
+- Runs worker loop 24/7 (push fanout, reminders, cleanup, metadata indexing)
+- Free tier credit covers the Micro VM entirely for small workloads
 
 ---
 
@@ -389,14 +390,14 @@
 ## 13. Minimum Production Budget
 
 | Item | Monthly Cost | Required? |
-|------|--------------|-----------|
+|----------|--------------|-----------|
 | Supabase Pro plan | $25 | **Yes** |
-| Worker host (Fly.io Micro) | ~$5 | **Yes** |
+| Worker host (Fly.io Micro) | **$0** (covered by $5/mo free credit) | **Yes** |
 | Cloudflare R2 | $0 (free tier sufficient) | **Yes** |
 | Vercel (web hosting) | $0 (hobby free) | **Yes** |
-| **Total** | **~$30/mo** | |
+| **Total** | **~$25/mo** | |
 
-> **Note:** First Supabase project on Pro includes $10 compute credits → effective **$25/mo** for database + **$5/mo** for worker = **~$30/mo total**.
+> **Note:** First Supabase project on Pro includes $10 compute credits → effective **$15/mo** for database. Fly.io $5/mo free credit covers the worker VM entirely. **Effective total: ~$15-25/mo** depending on Supabase credit usage.
 
 ---
 
@@ -405,7 +406,7 @@
 | Decision | Options | Recommendation |
 |----------|---------|----------------|
 | **Database plan** | Free vs Pro | **Pro ($25/mo)** — non-negotiable for production |
-| **Worker hosting** | Fly.io / Railway / UP server | **Fly.io ($5/mo)** — easiest setup |
+| **Worker hosting** | Fly.io / Railway / UP server | **Fly.io ($0-5/mo)** — $5/mo free credit covers Micro VM |
 | **File storage** | R2 (configure) | **R2** — free tier generous, no egress fees |
 | **Web hosting** | Vercel (free) | **Vercel** — already configured |
 | **Monitoring/alerts** | Supabase logs + external | Add later (UptimeRobot free) |
@@ -418,10 +419,12 @@
 |-------|-------|-------------|
 | **1. Database & Auth** | Connect all services to real tables, enable worker client | 2-3 weeks |
 | **2. File Storage** | R2 setup + upload/download flows | 1-2 weeks |
-| **3. Background Worker** | Deploy worker + implement 5 job handlers | 2-3 weeks |
+| **3. Background Worker** | Deploy worker (Fly.io) + implement 4 job handlers (push, reminders, cleanup, metadata indexing) | 2-3 weeks |
 | **4. Push Notifications** | VAPID + service worker + push fanout | 1 week |
 | **5. Admin & Polish** | Server-side admin, audit logs, load test | 1-2 weeks |
-| **Total** | | **7-11 weeks** |
+| **Total** | | **7-10 weeks** |
+
+> **Note:** Reviewer indexing job simplified — no pdftotext needed; only metadata-based search vector generation.
 
 ---
 
@@ -433,11 +436,12 @@
 | **Egress** | Data leaving the platform (downloads, API responses) |
 | **Pooled connection** | Shared database connection via PgBouncer (efficient for many short requests) |
 | **Direct connection** | Dedicated database connection (needed for long-running processes) |
-| **Worker** | Background server process that runs scheduled jobs (reminders, push, indexing) |
+| **Worker** | Background server process that runs scheduled jobs (reminders, push, indexing, cleanup) |
 | **R2** | Cloudflare object storage (like AWS S3, but no egress fees) |
 | **VAPID** | Web Push encryption keys (required for browser push notifications) |
 | **SLA** | Service Level Agreement — uptime guarantee with compensation |
 | **Auto-pause** | Supabase Free feature: stops database after 1 week of no queries |
+| **Fly.io** | Cloud platform for running always-on VMs; $5/mo free credit covers Micro VM |
 
 ---
 

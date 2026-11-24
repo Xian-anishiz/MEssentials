@@ -12,7 +12,7 @@ Values marked **TBD** are deliberately unresolved. Do not invent a final value u
 | Definition | Value | Notes |
 |---|---|---|
 | Web application hosting | Vercel | Confirmed for the web application. |
-| Worker deployment model | TBD | The worker is required, but its final deployment model is not selected. |
+| Worker deployment model | Fly.io Micro VM | $5/mo free credit covers always-on worker; no pdftotext needed. |
 | Allowed sign-up domain | `up.edu.ph` only | Account creation requires a verified Google identity from this exact domain. |
 | Academic-year calculation | None | Do not calculate year standing from entry year. |
 

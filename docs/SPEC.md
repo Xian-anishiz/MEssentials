@@ -88,7 +88,7 @@ The mockup does not include ticketing, repeated RFID scans during borrowing or r
 | Validation | Zod | Shared between client and server |
 | ORM / query layer | Drizzle ORM with `postgres` driver | Any typed query layer must disable prepared statements when used with the transaction pooler |
 | Password hashing | argon2id via `@node-rs/argon2` | Prebuilt binaries, no native build step |
-| PDF text extraction | `pdftotext` (poppler-utils) | Needs the binary on the worker host **[ASSUMPTION]** |
+| PDF text extraction | **Manual metadata only** | Manager enters title, authors, tags, course codes, description; no OCR or text extraction in v1 |
 | Language | TypeScript everywhere | |
 | Package manager | **pnpm** | Confirmed |
 
@@ -581,14 +581,13 @@ CREATE TABLE reviewers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   title text NOT NULL,
   authors text[] NOT NULL DEFAULT '{}',          -- display only (section 5.11)
-  description text,
+  description text,                              -- manager-entered description/summary
   file_key text NOT NULL,                        -- R2 key of the PDF
   file_size_bytes bigint NOT NULL,
   preview_image_key text,
   visibility visibility NOT NULL DEFAULT 'hidden',
   index_status index_status NOT NULL DEFAULT 'pending',
   index_error text,
-  has_selectable_text boolean,                 -- false when extraction yields fewer than 50 meaningful characters
   search_vector tsvector,
   published_at timestamptz,
   created_by uuid REFERENCES users(id),
@@ -611,12 +610,8 @@ CREATE TABLE reviewer_courses (                  -- drives the Course 1/2/3 filt
   PRIMARY KEY (reviewer_id, course_id)
 );
 
-CREATE TABLE reviewer_texts (                    -- extracted text, kept out of the main table
-  reviewer_id uuid PRIMARY KEY REFERENCES reviewers(id) ON DELETE CASCADE,
-  content text NOT NULL DEFAULT '',
-  manual_summary text NOT NULL DEFAULT '',
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
+-- reviewer_texts table removed: no PDF text extraction in v1.
+-- Search relies entirely on manager-entered metadata: title, authors, tags, course codes, description.
 
 CREATE TABLE reviewer_bookmarks (
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -626,7 +621,7 @@ CREATE TABLE reviewer_bookmarks (
 );
 ```
 
-Search vector weights (set by the index job and refreshed after manager edits): title = A, tags/course codes = B, manual summary = B, extracted text = C. Build the tags/course-code text by joining the reviewer's linked `reviewer_tag_map` and `reviewer_courses` rows to their canonical names/codes; do not assume tags or courses are duplicate free-text columns on `reviewers`. The GIN vector supports keyword search and ranking. The relational tag and course tables support exact filter chips and counts; apply those filters with joins or `EXISTS` clauses in addition to the vector match. A scanned-PDF marker is stored separately from the text so the UI can explain why automatic text search has no extracted content.
+Search vector weights (set by the index job and refreshed after manager edits): title = A, authors = A, tags = B, course codes = B, description = C. Build the tags/course-code text by joining the reviewer's linked `reviewer_tag_map` and `reviewer_courses` rows to their canonical names/codes; do not assume tags or courses are duplicate free-text columns on `reviewers`. The GIN vector supports keyword search and ranking. The relational tag and course tables support exact filter chips and counts; apply those filters with joins or `EXISTS` clauses in addition to the vector match. **No PDF text extraction in v1** — search relies entirely on manager-entered metadata.
 
 ### 5.6 ME Days
 
@@ -819,7 +814,6 @@ The schema is in 3NF, with BCNF for all key-based tables. These are deliberate e
 | `events.participation_constraints` (jsonb) | Not atomic | Read and validated as one rule object by the app | If rules grow, add a constraints table |
 | `audit_logs.target_type`, `target_id`, `metadata` | Polymorphic target, loose metadata | An audit trail should not need a foreign key per table | None |
 | `queue_entries.notified_next_at` | Event timestamp stored next to state | Needed for exactly-once alerts | None |
-| `reviewer_texts.manual_summary` | Free text in a separate one-to-one extension row | Manager-entered fallback text is searchable and belongs to the reviewer text payload; it is not a repeating group | Normalize into versioned annotations only if multiple independent summaries or authors are needed |
 | Category and course names | Stored once in lookup tables (`product_categories`, `borrowable_categories`, `event_categories`, `courses`) and linked by ids | Prevents case variants and makes counts/renames consistent | Keep this pattern for new filter dimensions |
 | Registration venue | Stored in `registration_sessions.location`; `advisers.desk` stores only a desk label | Avoids duplicate venue facts across advisers | Add adviser-specific location only if advisers can serve at distinct venues within one session |
 
@@ -1273,7 +1267,7 @@ Run only one worker unless you need more. A second worker is safe, but not neede
 | Queue | Job name | Trigger | Payload | Timeout | Notes |
 |---|---|---|---|---|---|
 | `push` | `push.fanout` | Inserted in the same transaction that creates notifications | `{ notificationIds: [] }` | 120 s | Sends web push for those notifications (section 8.5). |
-| `reviewers` | `reviewer.index` | After a reviewer is created, replaced, or reindexed | `{ reviewerId }` | 300 s | Text extraction and search index. See below. |
+| `reviewers` | `reviewer.index` | After a reviewer is created, replaced, or reindexed | `{ reviewerId }` | 60 s | Metadata-only search index. No PDF text extraction. See below. |
 | `maintenance` | `borrow.reminder-sweep` | Scheduler, hourly | none | 120 s | Due-soon and overdue reminders. See below. |
 | `maintenance` | `uploads.cleanup` | Scheduler, hourly | none | 120 s | Deletes expired pending uploads from R2 and marks them `expired`. |
 | `maintenance` | `jobs.retention` | Scheduler, daily | none | 120 s | Deletes `succeeded` jobs older than 7 days and `dead` jobs older than 30 days. Deletes expired sessions and stale `auth_throttle` rows. |
@@ -1330,15 +1324,13 @@ RETURNING q.user_id;
 
 (`$N` is `REGISTRATION_ALERT_POSITION`.) For each returned user, create a notification (service `registration`, subject "You're next in the registration queue") and enqueue `push.fanout`, all in the same transaction. The `notified_next_at IS NULL` guard runs under row locks, so two concurrent transactions cannot alert the same student twice. The alert and the on-screen position use the same ordering, so they agree.
 
-**`reviewer.index`** (algorithm: Reviewer Upload)
+**`reviewer.index`** (algorithm: Reviewer Metadata Indexing)
 
 1. Set `index_status = 'processing'`.
-2. Stream the PDF from R2 to a temp file. Enforce the size limit again.
-3. Extract text with `pdftotext`. Cap stored text at 5 MB of characters **[ASSUMPTION]**.
-4. In one transaction: upsert `reviewer_texts`, build `search_vector` = `setweight(to_tsvector('english', title), 'A') || setweight(to_tsvector('english', tags), 'B') || setweight(to_tsvector('english', text), 'C')`, set `index_status = 'ready'`.
-5. Delete the temp file in a `finally` block.
-6. Timeout 300 seconds. After the final failed attempt, set `index_status = 'failed'` and save `index_error`. The manager sees it and can call `/reviewers/:id/reindex`.
-7. **Scanned-PDF fallback:** after extraction, count meaningful non-whitespace characters. If fewer than 50 remain, set `has_selectable_text = false`, set `reviewer_texts.content = ''`, and set `index_status = 'ready'` (the file is valid; it simply has no selectable text). The management screen shows `Scanned PDF (No selectable text detected)`. A `megaral_manager` or Admin can add supplementary tags/course codes and a manual summary/transcription of up to 10,000 characters. Refresh the vector on every save using title A + tags/course codes B + manual summary B + extracted text C. Do not run OCR. If 50 or more meaningful characters are extracted, set `has_selectable_text = true` and index the extracted text as usual. If extraction itself errors, use retry handling and eventually `index_status = 'failed'`; do not mislabel a processing error as a scanned PDF.
+2. Read the reviewer's metadata from the database: title, authors, tags, course codes, description/summary.
+3. In one transaction: build `search_vector` = `setweight(to_tsvector('english', title), 'A') || setweight(to_tsvector('english', authors), 'A') || setweight(to_tsvector('english', tags), 'B') || setweight(to_tsvector('english', course_codes), 'B') || setweight(to_tsvector('english', description), 'C')`, set `index_status = 'ready'`, set `has_selectable_text = false` (no PDF text extraction in v1).
+4. Timeout 60 seconds. After the final failed attempt, set `index_status = 'failed'` and save `index_error`. The manager sees it and can call `/reviewers/:id/reindex`.
+5. **Manual metadata only:** No PDF text extraction, no `pdftotext`, no OCR. Search relies entirely on manager-entered fields: title, authors, tags, course codes, description/summary. The management screen shows all fields as editable. A `megaral_manager` or Admin can update any field and re-index. Refresh the vector on every save using the weights above.
 
 ### 8.4 Creating notifications
 
@@ -1550,7 +1542,7 @@ The following operational details still need confirmation. Core identity and v1 
 2. **Scanner and item-code scope (confirmed scope).** Use USB HID keyboard-emulation RFID reader hardware for student identity, login, and account linking. It types the card identifier into a focused field and sends Enter. The student links the card to their own account while signed in through UP Mail; the protected digest is stored in `student_rfid_cards`. Borrowing and returning use the already authenticated student session and do not repeat the RFID scan. Borrowable units keep a plaintext human-readable label and a `qr_code` text identifier in PostgreSQL. Dynamic QR image generation and camera scanning are deferred; no QR camera workflow is required for v1.
 3. **Changeable definitions.** Final image limits, loan rules, reminder timing, queue alert positions, rate limits, idempotency retention, and similar operational values belong in `PROJECT_DEFINITIONS.md` so they can be changed without rewriting the product specification.
 4. **Image storage.** You named R2 for reviewer files. This spec also stores product, event, borrowable, and avatar images in R2.
-5. **Hosting.** Vercel is confirmed for the web application. The final worker deployment model is not chosen. The worker still needs an always-on process and the `pdftotext` binary; record the final worker choice in `PROJECT_DEFINITIONS.md`.
+5. **Hosting.** Vercel is confirmed for the web application. **Fly.io is selected for the worker** — $5/mo free credit covers a Micro VM with IPv6. No `pdftotext` binary needed (reviewer indexing uses manual metadata only).
 6. **VAPID subject.** `VAPID_SUBJECT` needs a contact (`mailto:` or `https:`). Pick one the team controls.
 7. **Turnstile.** Needs a free Cloudflare account and a site key. If you prefer no third party, replace it with a rate limit only (weaker).
 8. **UP Mail identity rule (confirmed).** Google OAuth is required to create an account. Require `email_verified=true` and the exact `up.edu.ph` domain. Local password login is optional and can only be enabled after Google sign-in.
