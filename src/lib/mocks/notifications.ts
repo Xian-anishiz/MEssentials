@@ -1,3 +1,11 @@
+/**
+ * Mock notification data for frontend V1.0.
+ * 
+ * Provides static notification records with service types, subjects,
+ * bodies, links, and read status for the notifications mockup.
+ * Will be replaced with real database queries in Database V2.x.
+ */
+
 export interface NotificationItem {
   id: string;
   service: 'store' | 'kailangan' | 'megaral' | 'medays' | 'registration' | 'system';

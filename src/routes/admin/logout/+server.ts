@@ -1,3 +1,10 @@
+/**
+ * Admin logout API endpoint.
+ * 
+ * Deletes the user's session from the database and clears the session cookie.
+ * Redirects to /admin/login after logout.
+ */
+
 import { redirect } from '@sveltejs/kit';
 import { deleteSession, SESSION_COOKIE_NAME } from '$lib/server/auth/sessions';
 import type { RequestHandler } from './$types';

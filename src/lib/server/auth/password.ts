@@ -1,3 +1,12 @@
+/**
+ * Password hashing utilities using Argon2id.
+ * 
+ * Provides secure password hashing and verification for local password authentication.
+ * Uses @node-rs/argon2 with recommended parameters (memory: 19MiB, iterations: 2, parallelism: 1).
+ * 
+ * SPEC.md §2: Password hashing - argon2id via @node-rs/argon2
+ */
+
 import { hash, verify } from '@node-rs/argon2';
 
 /**

@@ -6,6 +6,12 @@ import * as schema from './schema';
 
 /**
  * Database client for runtime queries using the Supabase transaction pooler.
+ * 
+ * Provides a Drizzle ORM instance connected via the Supabase transaction pooler (port 6543).
+ * Uses postgres.js driver with prepared statements disabled (required for transaction pooler).
+ * Lazily initialized to support build-time execution without DATABASE_URL.
+ * Returns a dummy client during build that throws on actual use.
+ * 
  * SPEC.md §3.2: Use transaction pooler (port 6543) for Vercel web app with prepare: false
  */
 

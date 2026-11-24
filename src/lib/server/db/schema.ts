@@ -1,3 +1,17 @@
+/**
+ * Database Foundation V1 Schema (SPEC.md §5.2, Design A)
+ * 
+ * Drizzle ORM schema definitions for the initial database migration.
+ * Tables: users, sessions, volunteer_roles, auth_throttle
+ * Includes: volunteer_role enum
+ * 
+ * This schema represents the Database Foundation V1 milestone - the minimum
+ * tables needed for authentication, sessions, and role management.
+ * Service tables (store, borrow, events, etc.) are added in later migrations.
+ * 
+ * SPEC.md §5: Database Schema
+ */
+
 import {
   pgTable,
   uuid,

@@ -1,3 +1,11 @@
+/**
+ * Mock user accounts for frontend V1.0 authentication.
+ * 
+ * Provides static student, volunteer, and admin account profiles for
+ * the three separate login flows. Used by authState store for mock login.
+ * Will be replaced with real database authentication in Database V2.x.
+ */
+
 export interface UserProfile {
   firstName: string;
   middleInitial: string;

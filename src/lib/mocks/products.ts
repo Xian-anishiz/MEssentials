@@ -1,3 +1,11 @@
+/**
+ * Mock product data for HonestME Store frontend V1.0.
+ * 
+ * Provides static product records with categories, prices, costs, and
+ * quantities for the store mockup. Uses versioned localStorage for persistence.
+ * Will be replaced with real database queries in Database V2.x.
+ */
+
 export interface Product {
   id: string;
   name: string;

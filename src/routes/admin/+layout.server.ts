@@ -1,3 +1,13 @@
+/**
+ * Admin layout server load - protects all /admin/* routes.
+ * 
+ * Validates session cookie and checks admin authorization on every admin page load.
+ * Redirects to /admin/login if not authenticated or not an admin.
+ * Allows /admin/login to remain accessible without authentication.
+ * 
+ * SPEC.md §4.3: Check Admin permissions on the server, not just by hiding navigation links.
+ */
+
 import { redirect } from '@sveltejs/kit';
 import { getAuthContext, canAccessAdmin } from '$lib/server/auth/permissions';
 import { validateSession, SESSION_COOKIE_NAME } from '$lib/server/auth/sessions';

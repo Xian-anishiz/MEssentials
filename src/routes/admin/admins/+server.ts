@@ -1,3 +1,12 @@
+/**
+ * Admins API endpoint - POST to create new admin accounts.
+ * 
+ * Handles admin creation with validation (email domain, nickname format, password strength).
+ * Requires admin authorization. Uses Argon2id for password hashing.
+ * 
+ * Stage 3: Create Initial Admin Account - Database V2.x
+ */
+
 import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db/client';
 import { users } from '$lib/server/db/schema';

@@ -1,3 +1,14 @@
+/**
+ * Borrow (ME-kailangan) state management (Svelte 5 reactive).
+ * 
+ * Manages borrowable catalog, physical units, loans, and returns.
+ * Uses mock data with in-memory state for mockup V1.0.
+ * 
+ * Features: add/update/remove borrowables, borrow/return units, loan tracking.
+ * 
+ * TODO: Replace with server-side database operations in Database V2.x
+ */
+
 import { INITIAL_BORROWABLES, INITIAL_LOANS, type BorrowableItem, type BorrowableUnit, type LoanRecord } from '$mocks/borrowables';
 
 export function createBorrowState() {

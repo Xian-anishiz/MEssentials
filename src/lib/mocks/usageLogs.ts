@@ -1,3 +1,11 @@
+/**
+ * Mock usage log data for Admin dashboard V1.0.
+ * 
+ * Provides procedurally generated usage log records for the Usage Logs mockup.
+ * Includes service types, student numbers, admin IDs, timestamps, and locations.
+ * Will be replaced with real database queries in Database V2.x.
+ */
+
 export interface UsageLog {
   logId: string;
   serviceId: string;

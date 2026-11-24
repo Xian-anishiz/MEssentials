@@ -1,3 +1,10 @@
+/**
+ * Mock borrowable data for ME-kailangan (Borrow) frontend V1.0.
+ * 
+ * Provides static borrowable items, units, and loan records for the
+ * borrowing mockup. Will be replaced with real database queries in V2.x.
+ */
+
 export interface BorrowableUnit {
   id: string;
   label: string;

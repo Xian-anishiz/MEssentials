@@ -1,3 +1,10 @@
+/**
+ * Mock queue data for Registration frontend V1.0.
+ * 
+ * Provides static queue session state for the registration queue mockup.
+ * Will be replaced with real database queries in Database V2.x.
+ */
+
 export interface QueueStatus {
   sessionName: string;
   sessionOpen: boolean;

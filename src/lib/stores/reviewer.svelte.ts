@@ -1,3 +1,14 @@
+/**
+ * Reviewer (MEg-aral) state management (Svelte 5 reactive).
+ * 
+ * Manages reviewer catalog, bookmarks, search, and metadata for MEg-aral.
+ * Uses versioned localStorage for bookmark persistence in mockup V1.0.
+ * 
+ * Features: bookmark toggle, manual summary, reviewer CRUD, course code/tags.
+ * 
+ * TODO: Replace with server-side database operations in Database V2.x
+ */
+
 import { MOCK_REVIEWERS, type Reviewer } from '$mocks/reviewers';
 
 const STORAGE_KEY = 'messentials.mockup.v1.reviewers';

@@ -1,3 +1,13 @@
+/**
+ * Admin PATCH API endpoint - toggle admin active status.
+ * 
+ * Allows admins to activate/deactivate other admin accounts.
+ * Prevents self-deactivation and deactivating the last active admin.
+ * Requires admin authorization.
+ * 
+ * Stage 3: Create Initial Admin Account - Database V2.x
+ */
+
 import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db/client';
 import { users } from '$lib/server/db/schema';

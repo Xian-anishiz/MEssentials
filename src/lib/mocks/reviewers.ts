@@ -1,3 +1,12 @@
+/**
+ * Mock reviewer data for MEg-aral frontend V1.0.
+ * 
+ * Provides static reviewer records with titles, authors, course codes,
+ * tags, file sizes, and selectable text status for the reviewer mockup.
+ * Uses versioned localStorage for bookmark persistence.
+ * Will be replaced with real database queries in Database V2.x.
+ */
+
 export interface Reviewer {
   id: string;
   title: string;

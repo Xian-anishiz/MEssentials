@@ -1,3 +1,13 @@
+/**
+ * Volunteers page server load - fetches volunteer users with roles from database.
+ * 
+ * Provides server-side filtering, sorting, and pagination for the Volunteers page.
+ * Joins users table with volunteer_roles table to display assigned roles.
+ * Includes dynamic college dropdown and role labels from database.
+ * 
+ * Stage 4: Replace Admin Dashboard Mock Data - Database V2.x
+ */
+
 import { db } from '$lib/server/db/client';
 import { users, volunteerRoles, volunteerRoleEnum } from '$lib/server/db/schema';
 import { eq, desc, asc, ilike, or, and, inArray } from 'drizzle-orm';

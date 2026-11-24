@@ -1,3 +1,12 @@
+/**
+ * Permission checking and authorization helpers.
+ * 
+ * Provides server-side authorization functions for role-based access control.
+ * All permission checks happen on the server - never trust client-side role info.
+ * 
+ * SPEC.md §4.3: Enforce permissions in the model or a shared authorize() helper.
+ */
+
 import { db } from '../db/client';
 import { users, volunteerRoles, volunteerRoleEnum } from '../db/schema';
 import { eq } from 'drizzle-orm';

@@ -1,3 +1,13 @@
+/**
+ * Usage Logs page server load - placeholder for usage_logs table.
+ * 
+ * Provides server-side filtering, sorting, and pagination structure for Usage Logs.
+ * Currently returns empty array as usage_logs table not yet migrated.
+ * Will query actual usage_logs table when migration is added.
+ * 
+ * Stage 4: Replace Admin Dashboard Mock Data - Database V2.x
+ */
+
 import type { PageServerLoad } from './$types';
 
 export interface UsageLog {

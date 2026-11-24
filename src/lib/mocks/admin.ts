@@ -1,3 +1,10 @@
+/**
+ * Mock admin data for frontend V1.0.
+ * 
+ * Provides static admin user records for the admin dashboard mockup.
+ * Will be replaced with real database queries in Database V2.x.
+ */
+
 export interface AdminUser {
   adminId: string;
   nickname: string;

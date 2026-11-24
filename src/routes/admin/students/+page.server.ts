@@ -1,3 +1,13 @@
+/**
+ * Students page server load - fetches student users from database.
+ * 
+ * Provides server-side filtering, sorting, and pagination for the Students page.
+ * Loads non-admin users with college, degree program, and enrollment status.
+ * Includes dynamic college/degree program dropdowns from database.
+ * 
+ * Stage 4: Replace Admin Dashboard Mock Data - Database V2.x
+ */
+
 import { db } from '$lib/server/db/client';
 import { users } from '$lib/server/db/schema';
 import { eq, desc, asc, ilike, or, and } from 'drizzle-orm';

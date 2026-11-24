@@ -6,7 +6,13 @@ import { createHash } from 'crypto';
 
 /**
  * Session management for cookie-based authentication.
+ * 
+ * Handles creation, validation, and deletion of user sessions.
+ * Sessions are stored in the database with SHA-256 hashed tokens.
+ * Tokens are stored in HTTP-only cookies with 30-day expiry.
+ * 
  * SPEC.md §5.2: sessions table with id_hash (sha256 of session token)
+ * SECURITY: Tokens are never stored in plaintext - only SHA-256 hashes.
  */
 
 /**

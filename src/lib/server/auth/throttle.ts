@@ -1,3 +1,12 @@
+/**
+ * Login failure throttling utilities.
+ * 
+ * Tracks failed login attempts per user/IP and enforces temporary lockouts.
+ * Uses the auth_throttle table (persistent, survives restarts - no Redis needed).
+ * 
+ * SPEC.md §5.2: auth_throttle table for durable password-login failure counters.
+ */
+
 import { db } from '../db/client';
 import { authThrottle } from '../db/schema';
 import { eq } from 'drizzle-orm';

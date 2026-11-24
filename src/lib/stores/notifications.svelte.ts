@@ -1,3 +1,14 @@
+/**
+ * Notifications state management (Svelte 5 reactive).
+ * 
+ * Manages in-app notifications, read/unread status, and push opt-in.
+ * Uses mock data with in-memory state for mockup V1.0.
+ * 
+ * Features: mark as read, mark all as read, delete notifications.
+ * 
+ * TODO: Replace with server-side database operations in Database V2.x
+ */
+
 import { MOCK_NOTIFICATIONS, type NotificationItem } from '$mocks/notifications';
 
 export function createNotificationsState() {

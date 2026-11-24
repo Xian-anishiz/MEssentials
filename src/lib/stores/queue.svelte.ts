@@ -1,3 +1,14 @@
+/**
+ * Registration Queue state management (Svelte 5 reactive).
+ * 
+ * Manages queue session, user position, and queue operations for Registration.
+ * Uses mock data with in-memory state for mockup V1.0.
+ * 
+ * Features: join/leave queue, session open/close, advance queue, update fields.
+ * 
+ * TODO: Replace with server-side database operations in Database V2.x
+ */
+
 import { MOCK_QUEUE, type QueueStatus } from '$mocks/queue';
 
 export function createQueueState() {

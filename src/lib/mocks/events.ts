@@ -1,3 +1,11 @@
+/**
+ * Mock event data for ME Days frontend V1.0.
+ * 
+ * Provides static event records with categories, descriptions, locations,
+ * capacities, and registration prompts for the events mockup.
+ * Will be replaced with real database queries in Database V2.x.
+ */
+
 export interface EventItem {
   id: string;
   name: string;

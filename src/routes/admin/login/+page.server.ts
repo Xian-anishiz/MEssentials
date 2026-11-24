@@ -1,3 +1,13 @@
+/**
+ * Admin login page server handlers.
+ * 
+ * Handles password-based authentication for admin users.
+ * Includes login failure throttling, timing-safe password verification,
+ * and session cookie creation on successful login.
+ * 
+ * SPEC.md §4.3: Check Admin permissions on the server, not just by hiding navigation links.
+ */
+
 import { fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db/client';
 import { users } from '$lib/server/db/schema';

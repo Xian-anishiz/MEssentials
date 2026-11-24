@@ -1,3 +1,12 @@
+/**
+ * Mock academic data for college and degree program dropdowns.
+ * 
+ * Provides static lists of UP colleges and degree programs used in signup
+ * and profile forms. Currently Engineering-focused - to be expanded.
+ * 
+ * TODO: Expand to all UP colleges and programs
+ */
+
 export const COLLEGES = [
   'College of Engineering',
 ] as const;

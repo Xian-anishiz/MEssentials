@@ -1,3 +1,14 @@
+/**
+ * Store (HonestME) state management (Svelte 5 reactive).
+ * 
+ * Manages product catalog, shopping cart, and checkout for the HonestME Store.
+ * Uses versioned localStorage for persistence in mockup V1.0.
+ * 
+ * Features: product CRUD, cart management, quantity controls, total calculation.
+ * 
+ * TODO: Replace with server-side database operations in Database V2.x
+ */
+
 import { MOCK_PRODUCTS, type Product } from '$mocks/products';
 
 const STORAGE_KEY = 'messentials.mockup.v1.store.products';

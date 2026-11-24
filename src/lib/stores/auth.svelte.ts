@@ -1,3 +1,14 @@
+/**
+ * Authentication state store (Svelte 5 reactive).
+ * 
+ * Manages the current user's authentication state, profile, and login status.
+ * This is a MOCK store for frontend V1.0 - will be replaced with real auth in V2.x.
+ * 
+ * Provides: user profile, login/logout, RFID linking, push notification toggles.
+ * 
+ * TODO: Replace with server-side session validation in Database V2.x
+ */
+
 import { MOCK_ACCOUNTS, type AccountType, type UserProfile } from '$mocks/user';
 
 export function createAuthState() {

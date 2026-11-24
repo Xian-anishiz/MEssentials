@@ -1,3 +1,12 @@
+/**
+ * Admins page server load - fetches admin users from database.
+ * 
+ * Provides server-side filtering, sorting, and pagination for the Admins page.
+ * Loads users with is_admin=true from the database with URL-based state.
+ * 
+ * Stage 3: Create Initial Admin Account - Database V2.x
+ */
+
 import { db } from '$lib/server/db/client';
 import { users } from '$lib/server/db/schema';
 import { eq, desc, asc, ilike, or, and, count } from 'drizzle-orm';

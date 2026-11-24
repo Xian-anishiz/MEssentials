@@ -1,3 +1,14 @@
+/**
+ * Events (ME Days) state management (Svelte 5 reactive).
+ * 
+ * Manages events, registrations, and event details for ME Days.
+ * Uses mock data with in-memory state for mockup V1.0.
+ * 
+ * Features: event CRUD, registration/unregistration, custom prompts.
+ * 
+ * TODO: Replace with server-side database operations in Database V2.x
+ */
+
 import { MOCK_EVENTS, type EventItem } from '$mocks/events';
 
 export function createEventsState() {
