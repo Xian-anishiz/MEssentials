@@ -14,11 +14,11 @@
 
 <div class="flex flex-col gap-6 p-4">
   <div class="flex items-center gap-3">
-    <button onclick={handleBack} class="size-10 flex items-center justify-center rounded-m3-full bg-surface-variant text-on-surface-variant hover:bg-surface-container transition-colors">
+    <button onclick={handleBack} class="size-10 shrink-0 flex items-center justify-center rounded-m3-full bg-surface-variant text-on-surface-variant hover:bg-surface-container transition-colors">
       <span class="material-symbols-outlined">arrow_back</span>
     </button>
-    <h1 class="text-2xl font-normal text-on-surface">Queue Manager</h1>
-    <div class="ml-auto flex items-center gap-2">
+    <h1 class="text-xl sm:text-2xl font-normal text-on-surface">Queue Manager</h1>
+    <div class="ml-auto hidden sm:flex items-center gap-2">
       <span class="material-symbols-outlined text-sm text-on-surface-variant">volunteer_activism</span>
       <span class="text-sm text-on-surface-variant">Queue Manager</span>
     </div>
@@ -94,12 +94,12 @@
     </div>
   </div>
 
-  <div class="flex gap-3">
-    <Button variant="tonal" onclick={() => queueState.setSessionOpen(!queue.sessionOpen)}>
+  <div class="flex flex-col sm:flex-row gap-3">
+    <Button variant="tonal" class="w-full sm:w-auto" onclick={() => queueState.setSessionOpen(!queue.sessionOpen)}>
       <span class="material-symbols-outlined text-sm">{queue.sessionOpen ? 'pause_circle' : 'play_circle'}</span>
       {queue.sessionOpen ? 'Close Queue' : 'Open Queue'}
     </Button>
-    <Button variant="primary" disabled={!queue.sessionOpen} onclick={() => queueState.advanceQueue()}>
+    <Button variant="primary" class="w-full sm:w-auto" disabled={!queue.sessionOpen} onclick={() => queueState.advanceQueue()}>
       <span class="material-symbols-outlined text-sm">call</span>
       Call Next Student
     </Button>

@@ -18,9 +18,12 @@
     { label: 'Profile', href: '/profile', icon: 'person' },
   ];
 
-  const sharedTailItems: NavItem[] = [
-    { label: 'Notifications', href: '/notifications', icon: 'notifications' },
-    { label: 'Profile', href: '/profile', icon: 'person' },
+  const adminNavItems: NavItem[] = [
+    { label: 'Dashboard', href: '/admin', icon: 'dashboard' },
+    { label: 'Usage Logs', href: '/admin/usage-logs', icon: 'history' },
+    { label: 'Students', href: '/admin/students', icon: 'people' },
+    { label: 'Volunteers', href: '/admin/volunteers', icon: 'volunteer_activism' },
+    { label: 'Admins', href: '/admin/admins', icon: 'admin_panel_settings' },
   ];
 
   const roleManagerPages: Record<VolunteerRole, NavItem> = {
@@ -32,24 +35,28 @@
   };
 
   const navItems = $derived<NavItem[]>(
-    authState.user.role === 'volunteer'
-      ? [
-          { label: 'My Roles', href: '/volunteers', icon: 'volunteer_activism' },
-          ...(((authState.user.volunteerRoles ?? []) as VolunteerRole[]).map(r => roleManagerPages[r])),
-          ...sharedTailItems
-        ]
-      : studentNavItems
+    authState.user.role === 'admin'
+      ? adminNavItems
+      : authState.user.role === 'volunteer'
+        ? [
+            { label: 'My Roles', href: '/volunteers', icon: 'volunteer_activism' },
+            ...(((authState.user.volunteerRoles ?? []) as VolunteerRole[]).map(r => roleManagerPages[r])),
+            { label: 'Profile', href: '/profile', icon: 'person' },
+          ]
+        : studentNavItems
   );
 
   function isActive(item: NavItem): boolean {
     if (item.href === '/volunteers') return page.url.pathname === '/volunteers';
+    if (item.href === '/admin') return page.url.pathname === '/admin';
     return page.url.pathname.startsWith(item.href);
   }
 
   function handleLogout() {
+    const wasAdmin = authState.user.role === 'admin';
     onClose();
     authState.logout();
-    goto('/login');
+    goto(wasAdmin ? '/admin/login' : '/login');
   }
 </script>
 

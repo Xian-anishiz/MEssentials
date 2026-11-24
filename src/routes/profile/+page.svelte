@@ -47,7 +47,7 @@
   <title>Student Profile — MEssentials</title>
 </svelte:head>
 
-<div class="flex flex-1 min-h-full flex-col p-4 md:p-6 overflow-y-auto gap-8 max-w-3xl mx-auto w-full">
+<div class="flex flex-1 min-h-full flex-col p-4 md:p-6 gap-8 max-w-3xl mx-auto w-full">
   <div class="flex items-center gap-4">
     <div class="size-20 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-3xl font-bold">
       {user.firstName[0]}{user.lastName[0]}

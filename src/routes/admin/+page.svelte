@@ -82,7 +82,7 @@
   </div>
 
   <!-- Quick Links -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     <a href="/admin/usage-logs" class="group p-5 rounded-m3-xl bg-surface border border-outline-variant/30 hover:border-primary/50 transition-colors">
       <div class="size-12 rounded-m3-lg bg-primary-container/30 flex items-center justify-center text-primary mb-3">
         <span class="material-symbols-outlined text-[28px]">history</span>
@@ -113,14 +113,6 @@
       </div>
       <h3 class="font-medium text-on-surface">Admins</h3>
       <p class="text-sm text-on-surface-variant mt-1">Manage admin accounts</p>
-    </a>
-
-    <a href="/store" class="group p-5 rounded-m3-xl bg-surface border border-outline-variant/30 hover:border-primary/50 transition-colors">
-      <div class="size-12 rounded-m3-lg bg-primary-container/30 flex items-center justify-center text-primary mb-3">
-        <span class="material-symbols-outlined text-[28px]">shopping_cart</span>
-      </div>
-      <h3 class="font-medium text-on-surface">Student View</h3>
-      <p class="text-sm text-on-surface-variant mt-1">Switch to student dashboard</p>
     </a>
   </div>
 </div>

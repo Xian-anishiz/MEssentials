@@ -46,7 +46,7 @@
 </svelte:head>
 
 <div class="flex flex-1 min-h-full">
-  <div class="flex-1 flex flex-col p-4 md:p-6 overflow-y-auto gap-6">
+  <div class="flex-1 flex flex-col p-4 md:p-6 gap-6">
     <div class="flex md:hidden items-center justify-between">
       <h1 class="text-2xl font-normal text-on-surface">ME Days</h1>
       <button onclick={() => isFilterDrawerOpen = true} class="h-9 px-3 rounded-m3-sm bg-primary-container text-on-primary-container text-sm font-medium flex items-center gap-1">

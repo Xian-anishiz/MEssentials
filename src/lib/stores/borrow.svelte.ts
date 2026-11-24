@@ -31,24 +31,39 @@ export function createBorrowState() {
         units
       }];
     },
-    updateBorrowable(id: string, fields: { name?: string; category?: string; addUnits?: number }) {
+    updateBorrowable(id: string, fields: { name?: string; category?: string; addUnits?: number; removeUnits?: number }) {
       const item = borrowables.find(b => b.id === id);
       if (!item) return;
       const base = (fields.name?.trim() || item.name).split(/\s+/)[0];
       const prefix = base.length > 10 || base.length === 0 ? 'Unit' : base;
+
+      // Remove only available units so borrowed units are never silently dropped
+      let removeCount = Math.max(0, fields.removeUnits ?? 0);
+      const keptUnits = item.units.filter(u => {
+        if (removeCount > 0 && u.status === 'available') {
+          removeCount--;
+          return false;
+        }
+        return true;
+      });
+
       const extraCount = Math.max(0, fields.addUnits ?? 0);
-      const startIdx = item.units.length;
+      const maxLabelNum = keptUnits.reduce((max, u) => {
+        const match = u.label.match(/#(\d+)$/);
+        return match ? Math.max(max, Number(match[1])) : max;
+      }, 0);
       const extraUnits: BorrowableUnit[] = Array.from({ length: extraCount }, (_, i) => ({
         id: 'u_' + Math.random().toString(36).substr(2, 9),
-        label: `${prefix} #${String(startIdx + i + 1).padStart(2, '0')}`,
+        label: `${prefix} #${String(maxLabelNum + i + 1).padStart(2, '0')}`,
         status: 'available' as const
       }));
+
       borrowables = borrowables.map(b => b.id === id
         ? {
             ...b,
             name: fields.name?.trim() || b.name,
             category: fields.category?.trim() || b.category,
-            units: [...b.units, ...extraUnits]
+            units: [...keptUnits, ...extraUnits]
           }
         : b);
     },

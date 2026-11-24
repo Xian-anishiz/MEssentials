@@ -48,6 +48,17 @@ export function createReviewerState() {
     updateManualSummary(id: string, summary: string) {
       reviewers = reviewers.map(r => r.id === id ? { ...r, manualSummary: summary } : r);
     },
+    updateReviewer(id: string, fields: { title?: string; courseCode?: string; description?: string; tags?: string[] }) {
+      reviewers = reviewers.map(r => r.id === id
+        ? {
+            ...r,
+            title: fields.title?.trim() || r.title,
+            courseCode: fields.courseCode?.trim() || r.courseCode,
+            description: fields.description !== undefined ? fields.description.trim() : r.description,
+            tags: fields.tags ?? r.tags
+          }
+        : r);
+    },
     addReviewer(fields: { title: string; courseCode: string; description: string; tags: string[] }) {
       if (!fields.title.trim()) return;
       reviewers = [...reviewers, {

@@ -62,7 +62,7 @@
 
 
 <div class="flex flex-1 min-h-full">
-  <div class="flex-1 flex flex-col p-4 md:p-6 overflow-y-auto gap-6">
+  <div class="flex-1 flex flex-col p-4 md:p-6 gap-6">
     <div class="flex md:hidden items-center justify-between">
       <h1 class="text-2xl font-normal text-on-surface">ME-kailangan</h1>
       <button onclick={() => isFilterDrawerOpen = true} class="h-9 px-3 rounded-m3-sm bg-primary-container text-on-primary-container text-sm font-medium flex items-center gap-1">
@@ -72,7 +72,7 @@
     </div>
 
     <!-- Stat Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="grid grid-cols-3 gap-2 sm:gap-4">
       <StatCard label="Items on loan" value={`${borrowState.loans.length} active`} />
       <StatCard label="Due within 7 days" value={`${borrowState.dueSoonCount} item(s)`} highlight={borrowState.dueSoonCount > 0} />
       <StatCard label="Overdue" value={`${borrowState.overdueCount} item(s)`} highlight={borrowState.overdueCount > 0} />

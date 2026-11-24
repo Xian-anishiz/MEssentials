@@ -61,16 +61,18 @@
 
   <!-- Bottom: Notifications & Profile -->
   <div class="flex flex-col items-center gap-4">
-    <!-- Notifications -->
-    <a href="/notifications" class="relative flex flex-col items-center gap-1 group" title="Notifications">
-      <span class={`h-8 w-14 flex items-center justify-center rounded-m3-full transition-colors ${currentPath.startsWith('/notifications') ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface-variant hover:bg-primary/10'}`}>
-        <span class="material-symbols-outlined text-[24px]">notifications</span>
-      </span>
-      {#if unreadCount > 0}
-        <span class="absolute top-0 right-2 size-2.5 rounded-full bg-error ring-2 ring-background"></span>
-      {/if}
-      <span class="text-[11px] font-medium tracking-[0.5px] text-on-surface">Alerts</span>
-    </a>
+    <!-- Notifications (students only) -->
+    {#if authState.user.role === 'student'}
+      <a href="/notifications" class="relative flex flex-col items-center gap-1 group" title="Notifications">
+        <span class={`h-8 w-14 flex items-center justify-center rounded-m3-full transition-colors ${currentPath.startsWith('/notifications') ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface-variant hover:bg-primary/10'}`}>
+          <span class="material-symbols-outlined text-[24px]">notifications</span>
+        </span>
+        {#if unreadCount > 0}
+          <span class="absolute top-0 right-2 size-2.5 rounded-full bg-error ring-2 ring-background"></span>
+        {/if}
+        <span class="text-[11px] font-medium tracking-[0.5px] text-on-surface">Alerts</span>
+      </a>
+    {/if}
 
     <!-- Profile -->
     <a href="/profile" class="flex flex-col items-center gap-1 group" title="Profile">

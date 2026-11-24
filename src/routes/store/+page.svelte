@@ -113,7 +113,7 @@
 {/snippet}
 
 <div class="flex flex-1 min-h-full">
-  <div class="flex-1 flex flex-col p-4 pb-0 md:p-6 overflow-y-auto gap-4">
+  <div class="flex-1 flex flex-col p-4 pb-28 md:p-6 gap-4">
     <div class="flex md:hidden items-center justify-between mb-0">
       <h1 class="text-2xl font-normal text-on-surface">HonestME Store</h1>
       <button onclick={() => isFilterDrawerOpen = true} class="h-9 px-3 rounded-m3-sm bg-primary-container text-on-primary-container text-sm font-medium flex items-center gap-1">
@@ -137,10 +137,10 @@
       </div>
     {/if}
 
-    <!-- Mobile Cart: sticky bar pinned to the bottom of the screen -->
+    <!-- Mobile Cart: fixed bar pinned to the bottom of the screen so it is always visible -->
     <div
       aria-label="Cart"
-      class="md:hidden sticky bottom-0 mt-auto -mx-4 -mb-4 px-4 pt-3 pb-4 bg-surface border-t border-outline-variant/60 shadow-m3-2 flex items-center justify-between gap-3"
+      class="md:hidden fixed inset-x-0 bottom-0 z-30 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-surface border-t border-outline-variant/60 shadow-m3-2 flex items-center justify-between gap-3"
     >
       <div class="flex flex-col min-w-0">
         <span class="text-sm font-medium text-on-surface">Cart Items ({storeState.cartItemCount})</span>

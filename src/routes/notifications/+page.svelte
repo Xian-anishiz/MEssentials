@@ -10,7 +10,7 @@
   <title>Notifications — MEssentials</title>
 </svelte:head>
 
-<div class="flex flex-1 min-h-full flex-col p-4 md:p-6 overflow-y-auto gap-6 max-w-4xl mx-auto w-full">
+<div class="flex flex-1 min-h-full flex-col p-4 md:p-6 gap-6 max-w-4xl mx-auto w-full">
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-normal text-on-surface">Notifications</h1>

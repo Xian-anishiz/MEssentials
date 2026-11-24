@@ -18,6 +18,9 @@
   let newCapacity = $state('');
   let newDescription = $state('');
 
+  let removeModalOpen = $state(false);
+  let eventToRemove = $state<{ id: string; name: string } | null>(null);
+
   function resetCreateForm() {
     newName = '';
     newCategory = '';
@@ -26,6 +29,20 @@
     newCapacity = '';
     newDescription = '';
     createModalOpen = false;
+  }
+
+  function openRemoveModal(id: string) {
+    const event = events.find(e => e.id === id);
+    if (!event) return;
+    eventToRemove = event;
+    removeModalOpen = true;
+  }
+
+  function handleRemoveEvent() {
+    if (!eventToRemove) return;
+    eventsState.removeEvent(eventToRemove.id);
+    removeModalOpen = false;
+    eventToRemove = null;
   }
 
   function formatStartsAt(local: string): string {
@@ -57,48 +74,56 @@
 
 <div class="flex flex-col gap-6 p-4">
   <div class="flex items-center gap-3">
-    <button onclick={handleBack} class="size-10 flex items-center justify-center rounded-m3-full bg-surface-variant text-on-surface-variant hover:bg-surface-container transition-colors">
+    <button onclick={handleBack} class="size-10 shrink-0 flex items-center justify-center rounded-m3-full bg-surface-variant text-on-surface-variant hover:bg-surface-container transition-colors">
       <span class="material-symbols-outlined">arrow_back</span>
     </button>
-    <h1 class="text-2xl font-normal text-on-surface">Events Manager</h1>
-    <div class="ml-auto flex items-center gap-2">
+    <h1 class="text-xl sm:text-2xl font-normal text-on-surface">Events Manager</h1>
+    <div class="ml-auto hidden sm:flex items-center gap-2">
       <span class="material-symbols-outlined text-sm text-on-surface-variant">volunteer_activism</span>
       <span class="text-sm text-on-surface-variant">Events Manager</span>
     </div>
   </div>
 
-  <div class="rounded-m3-xl bg-surface border border-outline-variant/30">
-    <table class="w-full border-collapse">
+  <div class="flex items-center justify-between gap-4">
+    <h2 class="text-xl font-normal text-on-surface">Events Catalog</h2>
+    <Button variant="tonal" onclick={() => { createModalOpen = true; }}>
+      <span class="material-symbols-outlined text-sm">add</span>
+      Create Event
+    </Button>
+  </div>
+
+  <div class="overflow-x-auto rounded-m3-xl bg-surface border border-outline-variant/30">
+    <table class="w-full min-w-[640px] border-collapse">
       <thead>
         <tr class="border-b border-outline-variant/30">
           <th class="px-4 py-3 text-left text-sm font-medium text-on-surface">Event Name</th>
           <th class="px-4 py-3 text-left text-sm font-medium text-on-surface">Category</th>
           <th class="px-4 py-3 text-left text-sm font-medium text-on-surface">Starts At</th>
           <th class="px-4 py-3 text-right text-sm font-medium text-on-surface">Capacity</th>
+          <th class="px-4 py-3 text-right text-sm font-medium text-on-surface">Actions</th>
         </tr>
       </thead>
       <tbody>
-        {#each events as event}
+        {#each events as event (event.id)}
           <tr class="border-b border-outline-variant/20 hover:bg-surface-container/30 transition-colors">
             <td class="px-4 py-3 text-sm text-on-surface">{event.name}</td>
             <td class="px-4 py-3 text-sm text-on-surface">{event.category}</td>
             <td class="px-4 py-3 text-sm text-on-surface">{event.startsAt}</td>
             <td class="px-4 py-3 text-sm text-on-surface text-right">{event.capacity ?? 'Unlimited'}</td>
+            <td class="px-4 py-3 text-sm text-right">
+              <button
+                type="button"
+                aria-label={`Delete ${event.name}`}
+                onclick={() => openRemoveModal(event.id)}
+                class="p-1.5 rounded-m3-full text-on-surface-variant hover:text-error hover:bg-error/10 transition-colors"
+              >
+                <span class="material-symbols-outlined text-[20px]">delete</span>
+              </button>
+            </td>
           </tr>
         {/each}
       </tbody>
     </table>
-  </div>
-
-  <div class="flex gap-3">
-    <Button variant="tonal" onclick={() => { createModalOpen = true; }}>
-      <span class="material-symbols-outlined text-sm">add</span>
-      Create Event
-    </Button>
-    <Button variant="tonal" onclick={handleBack}>
-      <span class="material-symbols-outlined text-sm">arrow_back</span>
-      Back to My Roles
-    </Button>
   </div>
 </div>
 
@@ -137,4 +162,14 @@
       <Button variant="primary" type="submit">Create Event</Button>
     </div>
   </form>
+</Modal>
+
+<Modal isOpen={removeModalOpen} title="Delete event?">
+  <p class="text-on-surface">
+    Delete <strong>{eventToRemove?.name}</strong>? This removes the event and its registration details.
+  </p>
+  {#snippet actions()}
+    <Button variant="text" onclick={() => { removeModalOpen = false; eventToRemove = null; }}>Cancel</Button>
+    <Button variant="error" onclick={handleRemoveEvent}>Delete Event</Button>
+  {/snippet}
 </Modal>

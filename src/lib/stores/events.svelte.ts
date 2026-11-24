@@ -16,6 +16,9 @@ export function createEventsState() {
     unregisterEvent(id: string) {
       events = events.map(e => e.id === id ? { ...e, registered: false } : e);
     },
+    removeEvent(id: string) {
+      events = events.filter(e => e.id !== id);
+    },
     addEvent(fields: { name: string; category: string; location: string; startsAt: string; description: string; capacity: number | null }) {
       if (!fields.name.trim()) return;
       events = [...events, {

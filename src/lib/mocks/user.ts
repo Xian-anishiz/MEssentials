@@ -42,7 +42,7 @@ export const MOCK_ACCOUNTS: Record<AccountType, UserProfile> = {
     college: 'College of Engineering',
     degreeProgram: 'B.S. Mechanical Engineering',
     role: 'volunteer',
-    volunteerRoles: ['store_manager', 'kailangan_manager', 'medays_manager'],
+    volunteerRoles: ['store_manager', 'kailangan_manager', 'megaral_manager', 'medays_manager', 'registration_manager'],
     rfidCardLinked: true,
     rfidCardMasked: '\u2549\u2576\u2549\u2576 \u2549\u2576\u2549\u2576 A3F9',
     pushEnabled: false

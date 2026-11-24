@@ -2,6 +2,7 @@
   import '../app.css';
   import MobileNavDrawer from '$components/layout/MobileNavDrawer.svelte';
   import NavRail from '$components/layout/NavRail.svelte'
+  import { authState } from '$stores/auth.svelte';
   import { page } from '$app/stores';
 
   type Props = { children?: import('svelte').Snippet };
@@ -28,24 +29,26 @@
   {@render children?.()}
 
 {:else if isErrorRoute}
-  <div class="flex flex-1 flex-row align-middle justify-center h-screen bg-background overflow-hidden">
+  <div class="flex flex-1 flex-row align-middle justify-center h-dvh bg-background overflow-hidden">
     {@render children?.()}
   </div>
 
 {:else}
-  <div class="flex h-screen bg-background overflow-hidden">
+  <div class="flex h-dvh bg-background overflow-hidden overscroll-none">
     <NavRail />
 
-    <main class="flex-1 flex flex-col md:my-4 md:mx-4 md:rounded-m3-xl bg-surface overflow-hidden md:shadow-m3-1 md:border md:border-outline-variant/30">
-      <div class="md:hidden">
+    <main class="flex-1 flex flex-col min-h-0 md:my-4 md:mx-4 md:rounded-m3-xl bg-surface overflow-hidden md:shadow-m3-1 md:border md:border-outline-variant/30">
+      <div class="md:hidden shrink-0">
         <div class="flex items-center justify-between p-4 bg-surface border-b border-outline-variant">
           <button aria-label="Open navigation menu" class="size-10 flex items-center justify-center rounded-m3-full hover:bg-surface-variant transition-colors" onclick={() => isMobileMenuOpen = true}>
             <span class="material-symbols-outlined">menu</span>
           </button>
           <div class="flex items-center gap-2">
-            <a href="/notifications" aria-label="Notifications" class="relative size-10 flex items-center justify-center rounded-m3-full hover:bg-surface-variant transition-colors">
-              <span class="material-symbols-outlined">notifications</span>
-            </a>
+            {#if authState.user.role === 'student'}
+              <a href="/notifications" aria-label="Notifications" class="relative size-10 flex items-center justify-center rounded-m3-full hover:bg-surface-variant transition-colors">
+                <span class="material-symbols-outlined">notifications</span>
+              </a>
+            {/if}
             <a href="/profile" aria-label="Profile" class="p-1 rounded-full">
               <div class="size-8 rounded-full bg-primary-container flex items-center justify-center text-primary">
                 <span class="material-symbols-outlined text-sm">person</span>
@@ -55,7 +58,7 @@
         </div>
       </div>
 
-      <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <div class="flex-1 flex flex-col min-w-0 min-h-0 overflow-y-auto overscroll-contain">
         {@render children?.()}
       </div>
     </main>
