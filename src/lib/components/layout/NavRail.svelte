@@ -72,16 +72,16 @@
         {/if}
         <span class="text-[11px] font-medium tracking-[0.5px] text-on-surface">Alerts</span>
       </a>
+      
+      <!-- Profile -->
+      <a href="/profile" class="flex flex-col items-center gap-1 group" title="Profile">
+        <span class={`size-10 flex items-center justify-center rounded-m3-full transition-colors ${currentPath.startsWith('/profile') ? 'bg-primary text-on-primary' : 'bg-primary-container text-on-primary-container hover:brightness-95'}`}>
+          <span class="material-symbols-outlined text-[20px]">person</span>
+        </span>
+        <span class="text-[11px] font-medium tracking-[0.5px] text-on-surface">Profile</span>
+      </a>
     {/if}
-
-    <!-- Profile -->
-    <a href="/profile" class="flex flex-col items-center gap-1 group" title="Profile">
-      <span class={`size-10 flex items-center justify-center rounded-m3-full transition-colors ${currentPath.startsWith('/profile') ? 'bg-primary text-on-primary' : 'bg-primary-container text-on-primary-container hover:brightness-95'}`}>
-        <span class="material-symbols-outlined text-[20px]">person</span>
-      </span>
-      <span class="text-[11px] font-medium tracking-[0.5px] text-on-surface">Profile</span>
-    </a>
-
+      
     <!-- Logout -->
     <button
       type="button"
