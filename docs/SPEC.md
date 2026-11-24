@@ -77,7 +77,7 @@ The mockup does not include ticketing, repeated RFID scans during borrowing or r
 | Frontend | Svelte 5 with SvelteKit | Server-side rendering plus client navigation |
 | Styling | Tailwind CSS | Tokens in `UI_DESIGN.md` |
 | Backend | SvelteKit full-stack | API routes in `src/routes/api/v1/**/+server.ts` |
-| Database | PostgreSQL on Supabase | Pooled connection strings only (section 3.2) |
+| Database | PostgreSQL on Supabase | Vercel web functions use the transaction pooler; the separate worker and migrations use the direct connection when IPv6 is available, otherwise the session pooler (section 3.2). |
 | Object storage | Cloudflare R2 (S3-compatible) | Reviewer files and images |
 | Web application hosting | Vercel | Confirmed for the SvelteKit web application |
 | Background jobs | PostgreSQL `jobs` table + custom worker | Separate Node process (section 8) |
@@ -168,9 +168,11 @@ NODE_ENV=
 SESSION_SECRET=
 ALLOWED_EMAIL_DOMAINS=up.edu.ph
 
-# Database (Supabase, pooled only)
-DATABASE_URL=            # transaction pooler, port 6543, used by the web app and worker
-DATABASE_URL_MIGRATE=    # session pooler, port 5432 on the pooler host, used only by migrations
+# Database (Supabase)
+DATABASE_URL=            # transaction pooler, port 6543; used by the Vercel web app
+DATABASE_URL_WORKER=     # direct database host for the separate worker when its host supports IPv6
+DATABASE_URL_MIGRATE=    # direct database host for migrations when the environment supports IPv6
+                           # Otherwise use the session pooler (port 5432) for the worker or migrations
 
 # Google OAuth
 GOOGLE_CLIENT_ID=
@@ -212,17 +214,17 @@ There is no `REDIS_URL` and there are no email variables in this revision.
 
 ### 3.2 Supabase connection rules
 
-Database access is strictly through pooled connection strings. Follow these rules everywhere (web app, worker, scripts):
+Use the connection type that fits each MEssentials process:
 
-1. Never use the direct database host.
-2. Runtime traffic uses the **transaction pooler** string (port 6543).
-3. Disable prepared statements in the driver (`prepare: false` for `postgres`), because the transaction pooler does not support them.
-4. A transaction (`BEGIN` ... `COMMIT`) must run on one checked-out connection. Use the ORM's `db.transaction()` helper. Do not issue `BEGIN` across separate calls.
-5. Do not use session features in runtime code: `LISTEN/NOTIFY`, session-level advisory locks, `SET` without `LOCAL`, temp tables that outlive a transaction. The job worker polls and does not use `LISTEN/NOTIFY`.
-6. Migrations use the **session pooler** string (pooler host, port 5432). This is still pooled and supports the DDL features migrations need.
-7. Keep the app's connection pool small (for example max 10 per web instance, `WORKER_DB_POOL_MAX` for the worker) so the pooler is not exhausted.
+1. **Vercel web application:** use the Supabase **transaction pooler** connection string (port `6543`) for normal application queries. Vercel functions are short-lived and can scale to many instances, so they should not open direct database connections.
+2. **Separate background worker:** the worker is a long-running Node.js process, not a Vercel request function. Use the **direct database connection** when the worker host supports IPv6. If the worker host only supports IPv4, use the Supabase **session pooler** (port `5432`) instead.
+3. **Database migrations and one-off import scripts:** use the **direct database connection** when the environment supports IPv6. If it does not, use the **session pooler** (port `5432`). Do not run migrations through the transaction pooler.
+4. For the Vercel web app, disable prepared statements in the `postgres` driver (`prepare: false`), because the transaction pooler does not support them. Apply this setting to any other process that uses the transaction pooler.
+5. A transaction (`BEGIN` ... `COMMIT`) must run on one checked-out connection. Use the ORM's `db.transaction()` helper. Do not issue `BEGIN` across separate calls.
+6. Do not use session features through the transaction pooler: `LISTEN/NOTIFY`, session-level advisory locks, `SET` without `LOCAL`, or temporary tables that must survive beyond a transaction. The job worker polls and does not use `LISTEN/NOTIFY`.
+7. Keep connection pools small. Set a low per-instance maximum for Vercel functions (for example, `max: 1`) and size the worker pool with `WORKER_DB_POOL_MAX`. Reuse the database client at module scope so warm Vercel instances can reuse it.
 
-Use row locks (`SELECT ... FOR UPDATE`, `FOR UPDATE SKIP LOCKED`) and atomic `UPDATE ... WHERE` guards for concurrency. All of these work in transaction mode when they run inside one statement or one transaction.
+Use row locks (`SELECT ... FOR UPDATE`, `FOR UPDATE SKIP LOCKED`) and atomic `UPDATE ... WHERE` guards. Run multi-step locking operations inside one transaction. These operations are supported by the transaction pooler when kept within one transaction.
 
 ---
 
@@ -1223,7 +1225,7 @@ WHERE j.id = next.id
 RETURNING j.*;
 ```
 
-**Worker loop** (`pnpm worker`, one long-running Node process):
+**Worker loop** (`pnpm worker`, one long-running Node process; use `DATABASE_URL_WORKER`):
 
 1. Claim up to `WORKER_CONCURRENCY` minus running jobs.
 2. If nothing was claimed, sleep `WORKER_POLL_INTERVAL_MS` (default 3 seconds) plus a small random jitter.
@@ -1532,7 +1534,7 @@ V1 records each purchase with immutable `unit_price`, `unit_cost`, and `total` s
 The plan includes a Migration phase (4 days). Import from the existing Google Sheets and Forms:
 
 - Reviewers (links and metadata), HonestME stock, ME-kailangan items and units, event details.
-- Write one-off import scripts under `scripts/import/`. Run them through `DATABASE_URL_MIGRATE`.
+- Write one-off import scripts under `scripts/import/`. Run them through `DATABASE_URL_MIGRATE` (direct host when IPv6 is available; otherwise the session pooler).
 - Dry-run mode first. Log rejected rows.
 - Reviewer files currently on Google Docs need a manual export to PDF before upload **[ASSUMPTION]**.
 - **No accounts exist at launch.** Students create their own. Open loans from the old borrowing sheet can only be attached to a student who already has an account with a matching student number. Write the rest to a rejected-rows file and let the ME-kailangan manager enter them by hand after the students sign up **[ASSUMPTION]**.
